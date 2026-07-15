@@ -87,6 +87,7 @@ func toSetDTO(s gen.Set) setDTO {
 type workoutDTO struct {
 	ID           int64    `json:"id"`
 	Date         string   `json:"date"`
+	Title        string   `json:"title,omitempty"`
 	StartedAt    string   `json:"started_at,omitempty"`
 	FinishedAt   string   `json:"finished_at,omitempty"`
 	BodyweightKg *float64 `json:"bodyweight_kg,omitempty"`
@@ -97,7 +98,7 @@ type workoutDTO struct {
 
 func toWorkoutDTO(w gen.Workout) workoutDTO {
 	return workoutDTO{
-		ID: w.ID, Date: w.Date, StartedAt: w.StartedAt.String, FinishedAt: w.FinishedAt.String,
+		ID: w.ID, Date: w.Date, Title: w.Title, StartedAt: w.StartedAt.String, FinishedAt: w.FinishedAt.String,
 		BodyweightKg: gramsToKg(w.BodyweightG), Feeling: w.Feeling, Notes: w.Notes,
 	}
 }
@@ -107,6 +108,7 @@ func toWorkoutDTO(w gen.Workout) workoutDTO {
 func (s *server) handleCreateWorkout(w http.ResponseWriter, r *http.Request) {
 	var in struct {
 		Date      string `json:"date"`
+		Title     string `json:"title"`
 		StartedAt string `json:"started_at"`
 	}
 	if r.ContentLength > 0 && !decodeJSON(w, r, &in) {
@@ -123,6 +125,7 @@ func (s *server) handleCreateWorkout(w http.ResponseWriter, r *http.Request) {
 	wk, err := s.q.CreateWorkout(r.Context(), gen.CreateWorkoutParams{
 		UserID:    s.currentUserID(r),
 		Date:      in.Date,
+		Title:     in.Title,
 		StartedAt: started,
 		Feeling:   "",
 		Notes:     "",
@@ -215,6 +218,7 @@ func (s *server) handleUpdateWorkout(w http.ResponseWriter, r *http.Request) {
 	}
 	var in struct {
 		Date         *string  `json:"date"`
+		Title        *string  `json:"title"`
 		FinishedAt   *string  `json:"finished_at"`
 		BodyweightKg *float64 `json:"bodyweight_kg"`
 		Feeling      *string  `json:"feeling"`
@@ -226,6 +230,10 @@ func (s *server) handleUpdateWorkout(w http.ResponseWriter, r *http.Request) {
 	date := wk.Date
 	if in.Date != nil {
 		date = *in.Date
+	}
+	title := wk.Title
+	if in.Title != nil {
+		title = *in.Title
 	}
 	finished := wk.FinishedAt
 	if in.FinishedAt != nil {
@@ -244,7 +252,7 @@ func (s *server) handleUpdateWorkout(w http.ResponseWriter, r *http.Request) {
 		notes = *in.Notes
 	}
 	upd, err := s.q.UpdateWorkout(r.Context(), gen.UpdateWorkoutParams{
-		Date: date, StartedAt: wk.StartedAt, FinishedAt: finished, BodyweightG: bw,
+		Date: date, Title: title, StartedAt: wk.StartedAt, FinishedAt: finished, BodyweightG: bw,
 		Feeling: feeling, Notes: notes, UpdatedAt: s.opts.Now().UTC().Format(time.RFC3339), ID: wk.ID,
 	})
 	if err != nil {

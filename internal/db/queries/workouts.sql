@@ -1,6 +1,6 @@
 -- name: CreateWorkout :one
-INSERT INTO workouts (user_id, date, started_at, bodyweight_g, feeling, notes, created_at, updated_at)
-VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+INSERT INTO workouts (user_id, date, title, started_at, bodyweight_g, feeling, notes, created_at, updated_at)
+VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
 RETURNING *;
 
 -- name: GetWorkout :one
@@ -15,7 +15,7 @@ LIMIT @lim;
 
 -- name: UpdateWorkout :one
 UPDATE workouts
-SET date = ?, started_at = ?, finished_at = ?, bodyweight_g = ?, feeling = ?, notes = ?, updated_at = ?
+SET date = ?, title = ?, started_at = ?, finished_at = ?, bodyweight_g = ?, feeling = ?, notes = ?, updated_at = ?
 WHERE id = ?
 RETURNING *;
 

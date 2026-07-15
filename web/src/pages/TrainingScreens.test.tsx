@@ -23,10 +23,11 @@ describe('TodayPage', () => {
 })
 
 describe('WorkoutHistoryPage', () => {
-  it('показывает список тренировок по датам', async () => {
+  it('показывает список тренировок с датой и названием', async () => {
     authed()
     renderApp(<WorkoutHistoryPage />, '/workouts')
     expect(await screen.findByText(/10 мая 2026/)).toBeInTheDocument()
+    expect(screen.getByText(/Full-A/)).toBeInTheDocument()
   })
 })
 
@@ -40,6 +41,7 @@ describe('WorkoutDetailPage', () => {
       '/workout/500',
     )
     expect(await screen.findByText('Присед в Смите')).toBeInTheDocument()
+    expect(screen.getByRole('heading', { name: 'Full-A' })).toBeInTheDocument()
     expect(screen.getByText('60×12')).toBeInTheDocument()
     expect(screen.queryByText(/вес тела/i)).not.toBeInTheDocument()
   })

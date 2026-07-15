@@ -102,7 +102,7 @@ export const handlers = [
 
   http.get('/api/v1/workouts', () =>
     HttpResponse.json({
-      items: [{ id: 500, date: '2026-05-10', feeling: 'бодро', bodyweight_kg: 86.5, notes: '' }],
+      items: [{ id: 500, date: '2026-05-10', title: 'Full-A', feeling: 'бодро', bodyweight_kg: 86.5, notes: '' }],
       next_cursor: '',
     }),
   ),
@@ -111,6 +111,7 @@ export const handlers = [
     HttpResponse.json({
       id: 500,
       date: '2026-05-10',
+      title: 'Full-A',
       feeling: 'бодро',
       bodyweight_kg: 86.5,
       notes: '',

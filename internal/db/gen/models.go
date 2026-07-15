@@ -148,4 +148,5 @@ type Workout struct {
 	CreatedAt    string
 	UpdatedAt    string
 	ProgramDayID sql.NullInt64
+	Title        string
 }

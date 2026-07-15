@@ -63,14 +63,15 @@ func (q *Queries) CreateSet(ctx context.Context, arg CreateSetParams) (Set, erro
 }
 
 const createWorkout = `-- name: CreateWorkout :one
-INSERT INTO workouts (user_id, date, started_at, bodyweight_g, feeling, notes, created_at, updated_at)
-VALUES (?, ?, ?, ?, ?, ?, ?, ?)
-RETURNING id, user_id, date, started_at, finished_at, bodyweight_g, feeling, notes, created_at, updated_at, program_day_id
+INSERT INTO workouts (user_id, date, title, started_at, bodyweight_g, feeling, notes, created_at, updated_at)
+VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+RETURNING id, user_id, date, started_at, finished_at, bodyweight_g, feeling, notes, created_at, updated_at, program_day_id, title
 `
 
 type CreateWorkoutParams struct {
 	UserID      int64
 	Date        string
+	Title       string
 	StartedAt   sql.NullString
 	BodyweightG sql.NullInt64
 	Feeling     string
@@ -83,6 +84,7 @@ func (q *Queries) CreateWorkout(ctx context.Context, arg CreateWorkoutParams) (W
 	row := q.db.QueryRowContext(ctx, createWorkout,
 		arg.UserID,
 		arg.Date,
+		arg.Title,
 		arg.StartedAt,
 		arg.BodyweightG,
 		arg.Feeling,
@@ -103,6 +105,7 @@ func (q *Queries) CreateWorkout(ctx context.Context, arg CreateWorkoutParams) (W
 		&i.CreatedAt,
 		&i.UpdatedAt,
 		&i.ProgramDayID,
+		&i.Title,
 	)
 	return i, err
 }
@@ -245,7 +248,7 @@ func (q *Queries) GetSetByClientID(ctx context.Context, clientID sql.NullString)
 }
 
 const getWorkout = `-- name: GetWorkout :one
-SELECT id, user_id, date, started_at, finished_at, bodyweight_g, feeling, notes, created_at, updated_at, program_day_id FROM workouts WHERE id = ?
+SELECT id, user_id, date, started_at, finished_at, bodyweight_g, feeling, notes, created_at, updated_at, program_day_id, title FROM workouts WHERE id = ?
 `
 
 func (q *Queries) GetWorkout(ctx context.Context, id int64) (Workout, error) {
@@ -263,6 +266,7 @@ func (q *Queries) GetWorkout(ctx context.Context, id int64) (Workout, error) {
 		&i.CreatedAt,
 		&i.UpdatedAt,
 		&i.ProgramDayID,
+		&i.Title,
 	)
 	return i, err
 }
@@ -308,7 +312,7 @@ func (q *Queries) ListSetsForWorkout(ctx context.Context, workoutID int64) ([]Se
 }
 
 const listWorkoutsForUser = `-- name: ListWorkoutsForUser :many
-SELECT id, user_id, date, started_at, finished_at, bodyweight_g, feeling, notes, created_at, updated_at, program_day_id FROM workouts
+SELECT id, user_id, date, started_at, finished_at, bodyweight_g, feeling, notes, created_at, updated_at, program_day_id, title FROM workouts
 WHERE user_id = ?1
   AND (?2 = '' OR date < ?2 OR (date = ?2 AND id < ?3))
 ORDER BY date DESC, id DESC
@@ -348,6 +352,7 @@ func (q *Queries) ListWorkoutsForUser(ctx context.Context, arg ListWorkoutsForUs
 			&i.CreatedAt,
 			&i.UpdatedAt,
 			&i.ProgramDayID,
+			&i.Title,
 		); err != nil {
 			return nil, err
 		}
@@ -420,13 +425,14 @@ func (q *Queries) UpdateSet(ctx context.Context, arg UpdateSetParams) (Set, erro
 
 const updateWorkout = `-- name: UpdateWorkout :one
 UPDATE workouts
-SET date = ?, started_at = ?, finished_at = ?, bodyweight_g = ?, feeling = ?, notes = ?, updated_at = ?
+SET date = ?, title = ?, started_at = ?, finished_at = ?, bodyweight_g = ?, feeling = ?, notes = ?, updated_at = ?
 WHERE id = ?
-RETURNING id, user_id, date, started_at, finished_at, bodyweight_g, feeling, notes, created_at, updated_at, program_day_id
+RETURNING id, user_id, date, started_at, finished_at, bodyweight_g, feeling, notes, created_at, updated_at, program_day_id, title
 `
 
 type UpdateWorkoutParams struct {
 	Date        string
+	Title       string
 	StartedAt   sql.NullString
 	FinishedAt  sql.NullString
 	BodyweightG sql.NullInt64
@@ -439,6 +445,7 @@ type UpdateWorkoutParams struct {
 func (q *Queries) UpdateWorkout(ctx context.Context, arg UpdateWorkoutParams) (Workout, error) {
 	row := q.db.QueryRowContext(ctx, updateWorkout,
 		arg.Date,
+		arg.Title,
 		arg.StartedAt,
 		arg.FinishedAt,
 		arg.BodyweightG,
@@ -460,6 +467,7 @@ func (q *Queries) UpdateWorkout(ctx context.Context, arg UpdateWorkoutParams) (W
 		&i.CreatedAt,
 		&i.UpdatedAt,
 		&i.ProgramDayID,
+		&i.Title,
 	)
 	return i, err
 }
