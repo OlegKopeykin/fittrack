@@ -74,6 +74,38 @@ type MuscleGroup struct {
 	SortOrder int64
 }
 
+type Prescription struct {
+	ID           int64
+	ProgramDayID int64
+	ExerciseID   int64
+	Position     int64
+	Sets         int64
+	RepMin       sql.NullInt64
+	RepMax       sql.NullInt64
+	WeightMinG   sql.NullInt64
+	WeightMaxG   sql.NullInt64
+	RestSec      sql.NullInt64
+	Tempo        string
+	Notes        string
+}
+
+type Program struct {
+	ID          int64
+	UserID      int64
+	Name        string
+	Description string
+	ArchivedAt  sql.NullString
+	CreatedAt   string
+}
+
+type ProgramDay struct {
+	ID        int64
+	ProgramID int64
+	Position  int64
+	Name      string
+	Notes     string
+}
+
 type Session struct {
 	Token  string
 	Data   []byte
@@ -105,14 +137,15 @@ type User struct {
 }
 
 type Workout struct {
-	ID          int64
-	UserID      int64
-	Date        string
-	StartedAt   sql.NullString
-	FinishedAt  sql.NullString
-	BodyweightG sql.NullInt64
-	Feeling     string
-	Notes       string
-	CreatedAt   string
-	UpdatedAt   string
+	ID           int64
+	UserID       int64
+	Date         string
+	StartedAt    sql.NullString
+	FinishedAt   sql.NullString
+	BodyweightG  sql.NullInt64
+	Feeling      string
+	Notes        string
+	CreatedAt    string
+	UpdatedAt    string
+	ProgramDayID sql.NullInt64
 }

@@ -98,6 +98,12 @@ func New(opts Options) http.Handler {
 				priv.Patch("/sets/{id}", s.handleUpdateSet)
 				priv.Delete("/sets/{id}", s.handleDeleteSet)
 
+				// Программы (cookie или bearer).
+				priv.Get("/programs", s.handleListPrograms)
+				priv.Post("/programs", s.handleCreateProgram)
+				priv.Get("/programs/{id}", s.handleGetProgram)
+				priv.Delete("/programs/{id}", s.handleDeleteProgram)
+
 				// Персональные API-токены (только из cookie-сессии).
 				priv.Get("/tokens", s.handleListTokens)
 				priv.Post("/tokens", s.handleCreateToken)
