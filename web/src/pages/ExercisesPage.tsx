@@ -40,7 +40,7 @@ export default function ExercisesPage() {
           />
         </label>
 
-        <div className="mt-3 flex gap-2 overflow-x-auto pb-1">
+        <div className="mt-3 flex flex-wrap gap-2">
           {groupsQ.data?.map((g) => {
             const active = group === g.slug
             return (
