@@ -65,7 +65,7 @@ func (q *Queries) CreateSet(ctx context.Context, arg CreateSetParams) (Set, erro
 const createWorkout = `-- name: CreateWorkout :one
 INSERT INTO workouts (user_id, date, started_at, bodyweight_g, feeling, notes, created_at, updated_at)
 VALUES (?, ?, ?, ?, ?, ?, ?, ?)
-RETURNING id, user_id, date, started_at, finished_at, bodyweight_g, feeling, notes, created_at, updated_at
+RETURNING id, user_id, date, started_at, finished_at, bodyweight_g, feeling, notes, created_at, updated_at, program_day_id
 `
 
 type CreateWorkoutParams struct {
@@ -102,6 +102,7 @@ func (q *Queries) CreateWorkout(ctx context.Context, arg CreateWorkoutParams) (W
 		&i.Notes,
 		&i.CreatedAt,
 		&i.UpdatedAt,
+		&i.ProgramDayID,
 	)
 	return i, err
 }
@@ -244,7 +245,7 @@ func (q *Queries) GetSetByClientID(ctx context.Context, clientID sql.NullString)
 }
 
 const getWorkout = `-- name: GetWorkout :one
-SELECT id, user_id, date, started_at, finished_at, bodyweight_g, feeling, notes, created_at, updated_at FROM workouts WHERE id = ?
+SELECT id, user_id, date, started_at, finished_at, bodyweight_g, feeling, notes, created_at, updated_at, program_day_id FROM workouts WHERE id = ?
 `
 
 func (q *Queries) GetWorkout(ctx context.Context, id int64) (Workout, error) {
@@ -261,6 +262,7 @@ func (q *Queries) GetWorkout(ctx context.Context, id int64) (Workout, error) {
 		&i.Notes,
 		&i.CreatedAt,
 		&i.UpdatedAt,
+		&i.ProgramDayID,
 	)
 	return i, err
 }
@@ -306,7 +308,7 @@ func (q *Queries) ListSetsForWorkout(ctx context.Context, workoutID int64) ([]Se
 }
 
 const listWorkoutsForUser = `-- name: ListWorkoutsForUser :many
-SELECT id, user_id, date, started_at, finished_at, bodyweight_g, feeling, notes, created_at, updated_at FROM workouts
+SELECT id, user_id, date, started_at, finished_at, bodyweight_g, feeling, notes, created_at, updated_at, program_day_id FROM workouts
 WHERE user_id = ?1
   AND (?2 = '' OR date < ?2 OR (date = ?2 AND id < ?3))
 ORDER BY date DESC, id DESC
@@ -345,6 +347,7 @@ func (q *Queries) ListWorkoutsForUser(ctx context.Context, arg ListWorkoutsForUs
 			&i.Notes,
 			&i.CreatedAt,
 			&i.UpdatedAt,
+			&i.ProgramDayID,
 		); err != nil {
 			return nil, err
 		}
@@ -419,7 +422,7 @@ const updateWorkout = `-- name: UpdateWorkout :one
 UPDATE workouts
 SET date = ?, started_at = ?, finished_at = ?, bodyweight_g = ?, feeling = ?, notes = ?, updated_at = ?
 WHERE id = ?
-RETURNING id, user_id, date, started_at, finished_at, bodyweight_g, feeling, notes, created_at, updated_at
+RETURNING id, user_id, date, started_at, finished_at, bodyweight_g, feeling, notes, created_at, updated_at, program_day_id
 `
 
 type UpdateWorkoutParams struct {
@@ -456,6 +459,7 @@ func (q *Queries) UpdateWorkout(ctx context.Context, arg UpdateWorkoutParams) (W
 		&i.Notes,
 		&i.CreatedAt,
 		&i.UpdatedAt,
+		&i.ProgramDayID,
 	)
 	return i, err
 }
