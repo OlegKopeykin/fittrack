@@ -5,13 +5,23 @@ async function login(page) {
   await page.getByLabel('Логин').fill('e2euser')
   await page.getByLabel('Пароль').fill('e2e-password-123')
   await page.getByRole('button', { name: 'Войти' }).click()
-  await expect(page.getByText(/привет, e2euser/i)).toBeVisible()
+  await expect(page.getByRole('heading', { name: 'Тренировка' })).toBeVisible()
 }
 
-test('вкладка «Тренировка» показывает программы и историю', async ({ page }) => {
+test('вкладка «Тренировка» показывает программы, история за кнопкой', async ({ page }) => {
   await login(page)
   await expect(page.getByText('Демо-программа')).toBeVisible()
+  // истории нет на основном экране
+  await expect(page.getByText(/10 мая 2026/)).toHaveCount(0)
+  await page.getByRole('link', { name: 'История' }).click()
   await expect(page.getByText(/10 мая 2026/)).toBeVisible()
+})
+
+test('прогресс: график веса тела', async ({ page }) => {
+  await login(page)
+  await page.getByRole('link', { name: 'Прогресс' }).click()
+  await expect(page.getByRole('heading', { name: 'Вес тела' })).toBeVisible()
+  await expect(page.getByText('86.5')).toBeVisible()
 })
 
 test('детали программы: дни и предписания', async ({ page }) => {
@@ -25,6 +35,7 @@ test('детали программы: дни и предписания', async 
 
 test('детали тренировки: подходы по упражнению', async ({ page }) => {
   await login(page)
+  await page.getByRole('link', { name: 'История' }).click()
   await page.getByText(/10 мая 2026/).click()
   await expect(page.getByText('Присед в Смите')).toBeVisible()
   await expect(page.getByText('60×12')).toBeVisible()

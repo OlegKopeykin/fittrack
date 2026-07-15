@@ -2,6 +2,7 @@ import { Routes, Route, Navigate } from 'react-router-dom'
 import LoginPage from './pages/LoginPage'
 import RegisterPage from './pages/RegisterPage'
 import TodayPage from './pages/TodayPage'
+import WorkoutHistoryPage from './pages/WorkoutHistoryPage'
 import WorkoutDetailPage from './pages/WorkoutDetailPage'
 import ProgramDetailPage from './pages/ProgramDetailPage'
 import ExercisesPage from './pages/ExercisesPage'
@@ -23,6 +24,7 @@ export default function AppRoutes() {
         }
       >
         <Route path="/" element={<TodayPage />} />
+        <Route path="/workouts" element={<WorkoutHistoryPage />} />
         <Route path="/workout/:id" element={<WorkoutDetailPage />} />
         <Route path="/program/:id" element={<ProgramDetailPage />} />
         <Route path="/exercises" element={<ExercisesPage />} />

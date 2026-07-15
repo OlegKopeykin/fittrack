@@ -2,8 +2,10 @@ import { screen } from '@testing-library/react'
 import { Routes, Route } from 'react-router-dom'
 import { renderApp } from '../test/render'
 import TodayPage from './TodayPage'
+import WorkoutHistoryPage from './WorkoutHistoryPage'
 import WorkoutDetailPage from './WorkoutDetailPage'
 import ProgramDetailPage from './ProgramDetailPage'
+import ProgressPage from './ProgressPage'
 import { mockState } from '../test/handlers'
 
 function authed() {
@@ -11,18 +13,25 @@ function authed() {
 }
 
 describe('TodayPage', () => {
-  it('показывает программы и историю тренировок', async () => {
+  it('показывает программы и кнопку истории, без приветствия', async () => {
     authed()
     renderApp(<TodayPage />, '/')
     expect(await screen.findByText('Фул бади')).toBeInTheDocument()
-    expect(screen.getByText('5-дневный сплит')).toBeInTheDocument()
-    // история — дата тренировки
+    expect(screen.getByRole('link', { name: 'История' })).toHaveAttribute('href', '/workouts')
+    expect(screen.queryByText(/привет/i)).not.toBeInTheDocument()
+  })
+})
+
+describe('WorkoutHistoryPage', () => {
+  it('показывает список тренировок по датам', async () => {
+    authed()
+    renderApp(<WorkoutHistoryPage />, '/workouts')
     expect(await screen.findByText(/10 мая 2026/)).toBeInTheDocument()
   })
 })
 
 describe('WorkoutDetailPage', () => {
-  it('группирует подходы по упражнению с именами и весами', async () => {
+  it('группирует подходы по упражнению, без веса тела', async () => {
     authed()
     renderApp(
       <Routes>
@@ -31,8 +40,8 @@ describe('WorkoutDetailPage', () => {
       '/workout/500',
     )
     expect(await screen.findByText('Присед в Смите')).toBeInTheDocument()
-    expect(screen.getByText('40×12')).toBeInTheDocument()
     expect(screen.getByText('60×12')).toBeInTheDocument()
+    expect(screen.queryByText(/вес тела/i)).not.toBeInTheDocument()
   })
 })
 
@@ -48,5 +57,15 @@ describe('ProgramDetailPage', () => {
     expect(await screen.findByText('День A')).toBeInTheDocument()
     expect(screen.getByText('Присед в Смите')).toBeInTheDocument()
     expect(screen.getByText('3 × 6–10')).toBeInTheDocument()
+  })
+})
+
+describe('ProgressPage', () => {
+  it('показывает вес тела графиком с текущим значением', async () => {
+    authed()
+    renderApp(<ProgressPage />, '/progress')
+    expect(await screen.findByText('Вес тела')).toBeInTheDocument()
+    expect(await screen.findByText('86.5')).toBeInTheDocument()
+    expect(screen.getByRole('img', { name: /вес/i })).toBeInTheDocument()
   })
 })

@@ -32,12 +32,8 @@ export default function WorkoutDetailPage() {
       />
       <div className="mx-auto max-w-3xl px-5 py-4">
         {workout.isLoading && <p className="text-slate-500">Загрузка…</p>}
-        {workout.data && (workout.data.bodyweight_kg || workout.data.feeling) && (
-          <p className="mb-4 text-sm text-slate-400">
-            {workout.data.bodyweight_kg ? `Вес тела: ${workout.data.bodyweight_kg} кг` : ''}
-            {workout.data.bodyweight_kg && workout.data.feeling ? ' · ' : ''}
-            {workout.data.feeling}
-          </p>
+        {workout.data?.feeling && (
+          <p className="mb-4 text-sm text-slate-400">{workout.data.feeling}</p>
         )}
 
         <div className="flex flex-col gap-3">
