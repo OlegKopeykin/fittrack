@@ -11,7 +11,7 @@ test('вход существующим пользователем ведёт в
   await page.getByLabel('Логин').fill('e2euser')
   await page.getByLabel('Пароль').fill('e2e-password-123')
   await page.getByRole('button', { name: 'Войти' }).click()
-  await expect(page.getByText(/привет, e2euser/i)).toBeVisible()
+  await expect(page.getByRole('heading', { name: 'Тренировка' })).toBeVisible()
 
   // выход — на вкладке «Профиль»
   await page.getByRole('link', { name: 'Профиль' }).click()
@@ -24,7 +24,7 @@ test('каталог упражнений: поиск и переход', async 
   await page.getByLabel('Логин').fill('e2euser')
   await page.getByLabel('Пароль').fill('e2e-password-123')
   await page.getByRole('button', { name: 'Войти' }).click()
-  await expect(page.getByText(/привет, e2euser/i)).toBeVisible()
+  await expect(page.getByRole('heading', { name: 'Тренировка' })).toBeVisible()
 
   await page.getByRole('link', { name: 'Упражнения' }).click()
   await expect(page.getByRole('heading', { name: 'Упражнения' })).toBeVisible()
