@@ -122,6 +122,8 @@ jobs:
       contents: write
     steps:
       - uses: actions/checkout@v6
+        with:
+          fetch-depth: 0        # нужна вся история и теги для списка изменений
       - uses: actions/download-artifact@v4
         with:
           name: fittrack
@@ -130,6 +132,17 @@ jobs:
           chmod +x fittrack
           sha256sum fittrack | awk '{print $1}' > fittrack.sha256
           git rev-parse HEAD > fittrack.sha
+      - name: Собрать список изменений
+        run: |
+          prev="$(git describe --tags --abbrev=0 "${GITHUB_REF_NAME}^" 2>/dev/null || true)"
+          if [ -n "$prev" ]; then
+            printf '## Изменения с %s\n\n' "$prev" > notes.md
+            git log --no-merges --pretty='- %s' "${prev}..${GITHUB_REF_NAME}" >> notes.md
+          else
+            printf '## Изменения\n\n' > notes.md
+            git log --no-merges --pretty='- %s' "${GITHUB_REF_NAME}" >> notes.md
+          fi
+          cat notes.md
       - name: Publish release ${{ github.ref_name }}
         env:
           GH_TOKEN: ${{ github.token }}
@@ -137,4 +150,4 @@ jobs:
           gh release create "${{ github.ref_name }}" fittrack fittrack.sha256 fittrack.sha \
             --repo "$GITHUB_REPOSITORY" \
             --title "FitTrack ${{ github.ref_name }}" \
-            --notes "Версия ${{ github.ref_name }}"
+            --notes-file notes.md
