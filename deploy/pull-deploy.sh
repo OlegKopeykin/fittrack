@@ -1,21 +1,21 @@
 #!/usr/bin/env bash
-# Pull-деплой FitTrack: забирает «катящийся» GitHub Release и обновляет бинарь,
-# только если sha изменился. Запускается по таймеру (fittrack-deploy.timer).
+# Pull-деплой FitTrack: забирает последний версионный GitHub Release и обновляет
+# бинарь, только если sha изменился. Запускается по таймеру (fittrack-deploy.timer).
 # Репозиторий публичный → GitHub API без токена; входящий SSH не нужен.
 set -euo pipefail
 
 REPO="${FITTRACK_REPO:-OlegKopeykin/fittrack}"
 BIN="/opt/fittrack/bin/fittrack"
 STATE="/var/lib/fittrack/deployed.sha"
-API="https://api.github.com/repos/${REPO}/releases/tags/rolling"
+API="https://api.github.com/repos/${REPO}/releases/latest"
 
 tmp="$(mktemp -d)"
 trap 'rm -rf "$tmp"' EXIT
 
-# URL-ы ассетов свежего релиза (пока релиза нет — тихо выходим)
+# URL-ы ассетов последнего релиза (пока релизов нет — тихо выходим)
 assets="$(curl -fsSL "$API" 2>/dev/null || true)"
 if [ -z "$assets" ] || printf '%s' "$assets" | grep -q '"status": *"404"'; then
-    echo "релиз rolling ещё не опубликован"
+    echo "релизов ещё нет"
     exit 0
 fi
 # Строго browser_download_url, оканчивающийся точным именем ассета — иначе
@@ -36,7 +36,7 @@ if [ -f "$STATE" ] && [ "$(cat "$STATE")" = "$new_sha" ]; then
     exit 0   # уже актуально
 fi
 
-echo "новая сборка $new_sha — обновляюсь"
+echo "новый релиз $new_sha — обновляюсь"
 curl -fsSL "$(url_for fittrack)"        -o "$tmp/fittrack"
 curl -fsSL "$(url_for fittrack.sha256)" -o "$tmp/fittrack.sha256"
 

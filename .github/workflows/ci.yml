@@ -3,13 +3,13 @@ name: CI
 on:
   push:
     branches: [main]
+    tags: ['v*']
   pull_request:
 
 permissions:
   contents: read
 
-# На main раны строго последовательны (иначе два быстрых пуша могут
-# задеплоить старый бинарь поверх нового); на PR новый пуш отменяет старый ран.
+# На main раны последовательны; на PR новый пуш отменяет старый.
 concurrency:
   group: ci-${{ github.ref }}
   cancel-in-progress: ${{ github.ref != 'refs/heads/main' }}
@@ -111,11 +111,11 @@ jobs:
           path: e2e/playwright-report
           retention-days: 7
 
-  # Публикуем бинарь как «катящийся» GitHub Release. Хост забирает его сам
-  # (pull-деплой по таймеру) — никакого входящего SSH и секретов деплоя.
+  # Релиз публикуется только на тег версии vX.Y.Z. Автообновление хоста
+  # следит за последним релизом. Push в main лишь прогоняет тесты и сборку.
   release:
     name: Publish release
-    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    if: startsWith(github.ref, 'refs/tags/v')
     needs: [e2e]
     runs-on: ubuntu-latest
     permissions:
@@ -130,13 +130,11 @@ jobs:
           chmod +x fittrack
           sha256sum fittrack | awk '{print $1}' > fittrack.sha256
           git rev-parse HEAD > fittrack.sha
-      - name: Publish rolling release
+      - name: Publish release ${{ github.ref_name }}
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
-          gh release delete rolling --repo "$GITHUB_REPOSITORY" --yes --cleanup-tag 2>/dev/null || true
-          gh release create rolling fittrack fittrack.sha256 fittrack.sha \
+          gh release create "${{ github.ref_name }}" fittrack fittrack.sha256 fittrack.sha \
             --repo "$GITHUB_REPOSITORY" \
-            --title "Rolling build ($(git rev-parse --short HEAD))" \
-            --notes "Автосборка с main. Хост забирает через fittrack-deploy.timer." \
-            --target "$GITHUB_SHA"
+            --title "FitTrack ${{ github.ref_name }}" \
+            --notes "Версия ${{ github.ref_name }}"
