@@ -1,8 +1,12 @@
 import { Routes, Route, Navigate } from 'react-router-dom'
 import LoginPage from './pages/LoginPage'
 import RegisterPage from './pages/RegisterPage'
-import DashboardPage from './pages/DashboardPage'
+import TodayPage from './pages/TodayPage'
+import ExercisesPage from './pages/ExercisesPage'
+import ProgressPage from './pages/ProgressPage'
+import ProfilePage from './pages/ProfilePage'
 import RequireAuth from './components/RequireAuth'
+import AppShell from './components/AppShell'
 
 export default function AppRoutes() {
   return (
@@ -10,13 +14,17 @@ export default function AppRoutes() {
       <Route path="/login" element={<LoginPage />} />
       <Route path="/register" element={<RegisterPage />} />
       <Route
-        path="/"
         element={
           <RequireAuth>
-            <DashboardPage />
+            <AppShell />
           </RequireAuth>
         }
-      />
+      >
+        <Route path="/" element={<TodayPage />} />
+        <Route path="/exercises" element={<ExercisesPage />} />
+        <Route path="/progress" element={<ProgressPage />} />
+        <Route path="/profile" element={<ProfilePage />} />
+      </Route>
       <Route path="*" element={<Navigate to="/" replace />} />
     </Routes>
   )

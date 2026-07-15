@@ -51,4 +51,27 @@ export const handlers = [
     mockState.me = null
     return new HttpResponse(null, { status: 204 })
   }),
+
+  http.get('/api/v1/muscle-groups', () =>
+    HttpResponse.json([
+      { id: 1, slug: 'chest', name_ru: 'Грудь', weekly_mev: 8, weekly_mav: 18 },
+      { id: 2, slug: 'quads', name_ru: 'Квадрицепс', weekly_mev: 8, weekly_mav: 18 },
+      { id: 3, slug: 'lats', name_ru: 'Широчайшие', weekly_mev: 6, weekly_mav: 18 },
+    ]),
+  ),
+
+  http.get('/api/v1/exercises', ({ request }) => {
+    const url = new URL(request.url)
+    const q = (url.searchParams.get('q') ?? '').toLowerCase()
+    const group = url.searchParams.get('muscle_group') ?? ''
+    let list = [
+      { id: 10, name: 'Присед в Смите', muscle_group_id: 2, kind: 'compound', per_arm: false, technique_notes: '', global: true, archived: false, aliases: ['high-bar'] },
+      { id: 11, name: 'Жим гантелей лёжа', muscle_group_id: 1, kind: 'compound', per_arm: true, technique_notes: '', global: true, archived: false },
+      { id: 12, name: 'Тяга верхнего блока', muscle_group_id: 3, kind: 'compound', per_arm: false, technique_notes: '', global: true, archived: false, aliases: ['подтягивания'] },
+    ]
+    if (group === 'chest') list = list.filter((e) => e.muscle_group_id === 1)
+    if (q === 'подтягивания') list = list.filter((e) => e.id === 12)
+    else if (q) list = list.filter((e) => e.name.toLowerCase().includes(q))
+    return HttpResponse.json(list)
+  }),
 ]
