@@ -28,7 +28,10 @@ export default function WorkoutHistoryPage() {
                 className="flex items-center justify-between border-b border-slate-800/60 py-3"
               >
                 <div>
-                  <div className="font-medium text-slate-100">{formatDate(wk.date)}</div>
+                  <div className="font-medium text-slate-100">
+                    {formatDate(wk.date)}
+                    {wk.title ? <span className="text-indigo-300"> · {wk.title}</span> : ''}
+                  </div>
                   {wk.feeling && <div className="text-xs text-slate-500">{wk.feeling}</div>}
                 </div>
                 <span className="text-slate-600">›</span>

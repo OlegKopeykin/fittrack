@@ -86,7 +86,7 @@ func seedE2ETraining(ctx context.Context, q *gen.Queries, uid int64, now string)
 	}
 
 	wk, err := q.CreateWorkout(ctx, gen.CreateWorkoutParams{
-		UserID: uid, Date: "2026-05-10", StartedAt: sql.NullString{String: now, Valid: true},
+		UserID: uid, Date: "2026-05-10", Title: "Демо-день", StartedAt: sql.NullString{String: now, Valid: true},
 		BodyweightG: sql.NullInt64{Int64: 86500, Valid: true}, Feeling: "бодро",
 		CreatedAt: now, UpdatedAt: now,
 	})
@@ -106,7 +106,7 @@ func seedE2ETraining(ctx context.Context, q *gen.Queries, uid int64, now string)
 		}
 	}
 	_, err = q.UpdateWorkout(ctx, gen.UpdateWorkoutParams{
-		Date: "2026-05-10", FinishedAt: sql.NullString{String: now, Valid: true},
+		Date: "2026-05-10", Title: "Демо-день", FinishedAt: sql.NullString{String: now, Valid: true},
 		BodyweightG: sql.NullInt64{Int64: 86500, Valid: true}, Feeling: "бодро",
 		UpdatedAt: now, ID: wk.ID,
 	})

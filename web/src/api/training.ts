@@ -15,6 +15,7 @@ export type WorkoutSet = {
 export type Workout = {
   id: number
   date: string
+  title?: string
   started_at?: string
   finished_at?: string
   bodyweight_kg?: number

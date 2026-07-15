@@ -87,6 +87,36 @@ func TestWorkoutCreateGetList(t *testing.T) {
 	}
 }
 
+func TestWorkoutTitleRoundtrip(t *testing.T) {
+	ts := testutil.NewTestServer(t, nil)
+	ownerSession(t, ts)
+
+	resp := ts.PostJSON(t, "/api/v1/workouts", map[string]any{"title": "Full-A"})
+	if resp.StatusCode != http.StatusCreated {
+		t.Fatalf("create: status = %d, want 201", resp.StatusCode)
+	}
+	var wk struct {
+		ID    int64  `json:"id"`
+		Title string `json:"title"`
+	}
+	testutil.DecodeJSON(t, resp, &wk)
+	if wk.Title != "Full-A" {
+		t.Errorf("title после создания = %q, want Full-A", wk.Title)
+	}
+
+	upd := patchJSON(t, ts, "/api/v1/workouts/"+itoa(wk.ID), map[string]any{"title": "Full-B"})
+	if upd.StatusCode != http.StatusOK {
+		t.Fatalf("update: status = %d, want 200", upd.StatusCode)
+	}
+	var got struct {
+		Title string `json:"title"`
+	}
+	testutil.DecodeJSON(t, ts.Get(t, "/api/v1/workouts/"+itoa(wk.ID)), &got)
+	if got.Title != "Full-B" {
+		t.Errorf("title после обновления = %q, want Full-B", got.Title)
+	}
+}
+
 func TestAddSetAndReadBack(t *testing.T) {
 	ts := testutil.NewTestServer(t, nil)
 	ownerSession(t, ts)
