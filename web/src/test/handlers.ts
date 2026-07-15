@@ -74,4 +74,50 @@ export const handlers = [
     else if (q) list = list.filter((e) => e.name.toLowerCase().includes(q))
     return HttpResponse.json(list)
   }),
+
+  http.get('/api/v1/programs', () =>
+    HttpResponse.json([
+      { id: 1, name: 'Фул бади', description: 'A/B' },
+      { id: 2, name: '5-дневный сплит' },
+    ]),
+  ),
+
+  http.get('/api/v1/programs/1', () =>
+    HttpResponse.json({
+      id: 1,
+      name: 'Фул бади',
+      description: 'A/B',
+      days: [
+        {
+          id: 11,
+          position: 0,
+          name: 'День A',
+          exercises: [
+            { id: 100, exercise_id: 10, position: 0, sets: 3, rep_min: 6, rep_max: 10, weight_min_kg: 70, weight_max_kg: 90, tempo: '3-0-1' },
+          ],
+        },
+      ],
+    }),
+  ),
+
+  http.get('/api/v1/workouts', () =>
+    HttpResponse.json({
+      items: [{ id: 500, date: '2026-05-10', feeling: 'бодро', bodyweight_kg: 86.5, notes: '' }],
+      next_cursor: '',
+    }),
+  ),
+
+  http.get('/api/v1/workouts/500', () =>
+    HttpResponse.json({
+      id: 500,
+      date: '2026-05-10',
+      feeling: 'бодро',
+      bodyweight_kg: 86.5,
+      notes: '',
+      sets: [
+        { id: 1, exercise_id: 10, position: 0, role: 'warmup', weight_kg: 40, reps: 12 },
+        { id: 2, exercise_id: 10, position: 1, role: 'working', weight_kg: 60, reps: 12 },
+      ],
+    }),
+  ),
 ]
