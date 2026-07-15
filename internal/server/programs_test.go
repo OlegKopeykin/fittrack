@@ -124,3 +124,39 @@ func TestBearerCreatesProgram(t *testing.T) {
 		t.Fatalf("bearer create program: status = %d, want 201", resp.StatusCode)
 	}
 }
+
+func TestProgramArchiveFlow(t *testing.T) {
+	ts := testutil.NewTestServer(t, nil)
+	ownerSession(t, ts)
+	var prog struct {
+		ID int64 `json:"id"`
+	}
+	testutil.DecodeJSON(t, ts.PostJSON(t, "/api/v1/programs", map[string]any{"name": "Старая"}), &prog)
+
+	// в архив
+	if resp := ts.PostJSON(t, "/api/v1/programs/"+itoa(prog.ID)+"/archive", nil); resp.StatusCode != http.StatusNoContent {
+		t.Fatalf("archive: status = %d, want 204", resp.StatusCode)
+	}
+	// пропала из активного списка
+	var active []map[string]any
+	testutil.DecodeJSON(t, ts.Get(t, "/api/v1/programs"), &active)
+	if len(active) != 0 {
+		t.Errorf("активных программ = %d, want 0", len(active))
+	}
+	// видна в архиве
+	var archived []struct {
+		Archived bool `json:"archived"`
+	}
+	testutil.DecodeJSON(t, ts.Get(t, "/api/v1/programs?archived=1"), &archived)
+	if len(archived) != 1 || !archived[0].Archived {
+		t.Errorf("архивных программ = %+v, want 1 archived", archived)
+	}
+	// вернуть из архива
+	if resp := ts.PostJSON(t, "/api/v1/programs/"+itoa(prog.ID)+"/unarchive", nil); resp.StatusCode != http.StatusNoContent {
+		t.Fatalf("unarchive: status = %d, want 204", resp.StatusCode)
+	}
+	testutil.DecodeJSON(t, ts.Get(t, "/api/v1/programs"), &active)
+	if len(active) != 1 {
+		t.Errorf("после возврата активных = %d, want 1", len(active))
+	}
+}

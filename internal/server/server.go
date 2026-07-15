@@ -103,6 +103,8 @@ func New(opts Options) http.Handler {
 				priv.Post("/programs", s.handleCreateProgram)
 				priv.Get("/programs/{id}", s.handleGetProgram)
 				priv.Delete("/programs/{id}", s.handleDeleteProgram)
+				priv.Post("/programs/{id}/archive", s.handleArchiveProgram)
+				priv.Post("/programs/{id}/unarchive", s.handleUnarchiveProgram)
 
 				// Персональные API-токены (только из cookie-сессии).
 				priv.Get("/tokens", s.handleListTokens)

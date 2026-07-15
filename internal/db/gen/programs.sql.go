@@ -160,6 +160,42 @@ func (q *Queries) GetProgram(ctx context.Context, id int64) (Program, error) {
 	return i, err
 }
 
+const listArchivedProgramsForUser = `-- name: ListArchivedProgramsForUser :many
+SELECT id, user_id, name, description, archived_at, created_at FROM programs
+WHERE user_id = ? AND archived_at IS NOT NULL
+ORDER BY id
+`
+
+func (q *Queries) ListArchivedProgramsForUser(ctx context.Context, userID int64) ([]Program, error) {
+	rows, err := q.db.QueryContext(ctx, listArchivedProgramsForUser, userID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []Program
+	for rows.Next() {
+		var i Program
+		if err := rows.Scan(
+			&i.ID,
+			&i.UserID,
+			&i.Name,
+			&i.Description,
+			&i.ArchivedAt,
+			&i.CreatedAt,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Close(); err != nil {
+		return nil, err
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
 const listPrescriptionsForDay = `-- name: ListPrescriptionsForDay :many
 SELECT id, program_day_id, exercise_id, position, sets, rep_min, rep_max, weight_min_g, weight_max_g, rest_sec, tempo, notes FROM prescriptions WHERE program_day_id = ? ORDER BY position
 `
@@ -267,4 +303,22 @@ func (q *Queries) ListProgramsForUser(ctx context.Context, userID int64) ([]Prog
 		return nil, err
 	}
 	return items, nil
+}
+
+const setProgramArchived = `-- name: SetProgramArchived :execrows
+UPDATE programs SET archived_at = ? WHERE id = ? AND user_id = ?
+`
+
+type SetProgramArchivedParams struct {
+	ArchivedAt sql.NullString
+	ID         int64
+	UserID     int64
+}
+
+func (q *Queries) SetProgramArchived(ctx context.Context, arg SetProgramArchivedParams) (int64, error) {
+	result, err := q.db.ExecContext(ctx, setProgramArchived, arg.ArchivedAt, arg.ID, arg.UserID)
+	if err != nil {
+		return 0, err
+	}
+	return result.RowsAffected()
 }

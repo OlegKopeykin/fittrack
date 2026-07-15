@@ -34,6 +34,41 @@ func runAdmin(cfg config.Config, args []string) error {
 	ctx := context.Background()
 
 	switch args[0] {
+	case "token":
+		fs := flag.NewFlagSet("token", flag.ContinueOnError)
+		user := fs.String("user", "", "имя пользователя")
+		name := fs.String("name", "cli", "имя токена")
+		days := fs.Int("days", 0, "срок действия в днях (0 — бессрочно)")
+		if err := fs.Parse(args[1:]); err != nil {
+			return err
+		}
+		if *user == "" {
+			return fmt.Errorf("укажите --user")
+		}
+		u, err := q.GetUserByUsername(ctx, *user)
+		if err != nil {
+			return fmt.Errorf("пользователь %q не найден", *user)
+		}
+		plaintext, hash, prefix, err := auth.NewAPIToken()
+		if err != nil {
+			return err
+		}
+		var expires sql.NullString
+		if *days > 0 {
+			expires = sql.NullString{
+				String: time.Now().UTC().AddDate(0, 0, *days).Format(time.RFC3339),
+				Valid:  true,
+			}
+		}
+		if _, err := q.CreateApiToken(ctx, gen.CreateApiTokenParams{
+			UserID: u.ID, Name: *name, TokenHash: hash, Prefix: prefix,
+			CreatedAt: time.Now().UTC().Format(time.RFC3339), ExpiresAt: expires,
+		}); err != nil {
+			return err
+		}
+		fmt.Println(plaintext)
+		return nil
+
 	case "create-invite":
 		fs := flag.NewFlagSet("create-invite", flag.ContinueOnError)
 		owner := fs.Bool("owner", false, "инвайт с ролью owner")

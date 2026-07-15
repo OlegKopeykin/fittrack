@@ -77,6 +77,7 @@ type programDTO struct {
 	ID          int64           `json:"id"`
 	Name        string          `json:"name"`
 	Description string          `json:"description,omitempty"`
+	Archived    bool            `json:"archived,omitempty"`
 	Days        []programDayDTO `json:"days,omitempty"`
 }
 
@@ -198,16 +199,49 @@ func (s *server) loadProgram(r *http.Request, prog gen.Program) (programDTO, err
 }
 
 func (s *server) handleListPrograms(w http.ResponseWriter, r *http.Request) {
-	progs, err := s.q.ListProgramsForUser(r.Context(), s.currentUserID(r))
+	uid := s.currentUserID(r)
+	var progs []gen.Program
+	var err error
+	if r.URL.Query().Get("archived") == "1" {
+		progs, err = s.q.ListArchivedProgramsForUser(r.Context(), uid)
+	} else {
+		progs, err = s.q.ListProgramsForUser(r.Context(), uid)
+	}
 	if err != nil {
 		writeError(w, http.StatusInternalServerError, "internal", nil)
 		return
 	}
 	out := make([]programDTO, 0, len(progs))
 	for _, p := range progs {
-		out = append(out, programDTO{ID: p.ID, Name: p.Name, Description: p.Description})
+		out = append(out, programDTO{ID: p.ID, Name: p.Name, Description: p.Description, Archived: p.ArchivedAt.Valid})
 	}
 	writeJSON(w, http.StatusOK, out)
+}
+
+func (s *server) setProgramArchived(w http.ResponseWriter, r *http.Request, archived bool) {
+	prog, ok := s.programForUser(w, r)
+	if !ok {
+		return
+	}
+	var at sql.NullString
+	if archived {
+		at = sql.NullString{String: s.opts.Now().UTC().Format(time.RFC3339), Valid: true}
+	}
+	if _, err := s.q.SetProgramArchived(r.Context(), gen.SetProgramArchivedParams{
+		ArchivedAt: at, ID: prog.ID, UserID: prog.UserID,
+	}); err != nil {
+		writeError(w, http.StatusInternalServerError, "internal", nil)
+		return
+	}
+	w.WriteHeader(http.StatusNoContent)
+}
+
+func (s *server) handleArchiveProgram(w http.ResponseWriter, r *http.Request) {
+	s.setProgramArchived(w, r, true)
+}
+
+func (s *server) handleUnarchiveProgram(w http.ResponseWriter, r *http.Request) {
+	s.setProgramArchived(w, r, false)
 }
 
 func (s *server) programForUser(w http.ResponseWriter, r *http.Request) (gen.Program, bool) {

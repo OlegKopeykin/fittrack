@@ -8,8 +8,16 @@ SELECT * FROM programs
 WHERE user_id = ? AND archived_at IS NULL
 ORDER BY id;
 
+-- name: ListArchivedProgramsForUser :many
+SELECT * FROM programs
+WHERE user_id = ? AND archived_at IS NOT NULL
+ORDER BY id;
+
 -- name: GetProgram :one
 SELECT * FROM programs WHERE id = ?;
+
+-- name: SetProgramArchived :execrows
+UPDATE programs SET archived_at = ? WHERE id = ? AND user_id = ?;
 
 -- name: DeleteProgram :execrows
 DELETE FROM programs WHERE id = ? AND user_id = ?;
