@@ -1,0 +1,142 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+permissions:
+  contents: read
+
+# На main раны строго последовательны (иначе два быстрых пуша могут
+# задеплоить старый бинарь поверх нового); на PR новый пуш отменяет старый ран.
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: ${{ github.ref != 'refs/heads/main' }}
+
+jobs:
+  go:
+    name: Go tests
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+      - uses: actions/setup-go@v6
+        with:
+          go-version-file: go.mod
+      - run: go vet ./...
+      - run: go test -race -cover ./...
+
+  web:
+    name: Web tests
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: web
+    steps:
+      - uses: actions/checkout@v6
+      - uses: actions/setup-node@v6
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: web/package-lock.json
+      - run: npm ci
+      - run: npm run lint
+      - run: npx vitest run --coverage
+
+  build:
+    name: Build binary
+    runs-on: ubuntu-latest
+    needs: [go, web]
+    steps:
+      - uses: actions/checkout@v6
+      - uses: actions/setup-node@v6
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: web/package-lock.json
+      - uses: actions/setup-go@v6
+        with:
+          go-version-file: go.mod
+      - name: Build web
+        working-directory: web
+        run: |
+          npm ci
+          npm run build
+      - name: Build binary (linux/amd64, embedded SPA)
+        env:
+          CGO_ENABLED: "0"
+          GOOS: linux
+          GOARCH: amd64
+        run: go build -tags embedweb -trimpath -ldflags="-s -w" -o fittrack ./cmd/fittrack
+      - uses: actions/upload-artifact@v4
+        with:
+          name: fittrack
+          path: fittrack
+          retention-days: 7
+
+  e2e:
+    name: E2E (${{ matrix.project }})
+    runs-on: ubuntu-latest
+    needs: build
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - project: iphone-15-pro
+            browser: webkit
+          - project: desktop-chrome
+            browser: chromium
+    steps:
+      - uses: actions/checkout@v6
+      - uses: actions/setup-node@v6
+        with:
+          node-version: 22
+      - uses: actions/download-artifact@v4
+        with:
+          name: fittrack
+          path: bin
+      - run: chmod +x bin/fittrack
+      - name: Install Playwright (${{ matrix.browser }})
+        working-directory: e2e
+        run: |
+          npm ci
+          npx playwright install --with-deps ${{ matrix.browser }}
+      - name: Run E2E
+        working-directory: e2e
+        run: npx playwright test --project=${{ matrix.project }}
+      - uses: actions/upload-artifact@v4
+        if: failure()
+        with:
+          name: playwright-report-${{ matrix.project }}
+          path: e2e/playwright-report
+          retention-days: 7
+
+  # Публикуем бинарь как «катящийся» GitHub Release. Хост забирает его сам
+  # (pull-деплой по таймеру) — никакого входящего SSH и секретов деплоя.
+  release:
+    name: Publish release
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    needs: [e2e]
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v6
+      - uses: actions/download-artifact@v4
+        with:
+          name: fittrack
+      - name: Prepare assets
+        run: |
+          chmod +x fittrack
+          sha256sum fittrack | awk '{print $1}' > fittrack.sha256
+          git rev-parse HEAD > fittrack.sha
+      - name: Publish rolling release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh release delete rolling --repo "$GITHUB_REPOSITORY" --yes --cleanup-tag 2>/dev/null || true
+          gh release create rolling fittrack fittrack.sha256 fittrack.sha \
+            --repo "$GITHUB_REPOSITORY" \
+            --title "Rolling build ($(git rev-parse --short HEAD))" \
+            --notes "Автосборка с main. Хост забирает через fittrack-deploy.timer." \
+            --target "$GITHUB_SHA"

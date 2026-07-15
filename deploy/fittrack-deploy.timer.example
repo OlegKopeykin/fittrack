@@ -1,0 +1,11 @@
+# /etc/systemd/system/fittrack-deploy.timer — проверять релиз каждые 2 минуты
+[Unit]
+Description=FitTrack pull-deploy timer
+
+[Timer]
+OnBootSec=1min
+OnUnitActiveSec=2min
+AccuracySec=15s
+
+[Install]
+WantedBy=timers.target

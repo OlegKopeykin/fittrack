@@ -1,0 +1,10 @@
+# /etc/systemd/system/fittrack-deploy.service — oneshot pull-деплоя
+[Unit]
+Description=FitTrack pull-deploy (fetch rolling release)
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=oneshot
+ExecStart=/opt/fittrack/bin/pull-deploy.sh
+# Рестарт самого приложения нужен под root; сам скрипт не даёт привилегий сверх этого.

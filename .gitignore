@@ -1,0 +1,34 @@
+# binaries
+/bin/
+*.exe
+
+# databases
+*.db
+*.db-wal
+*.db-shm
+
+# frontend
+node_modules/
+web/dist/
+web/coverage/
+
+# e2e
+e2e/test-results/
+e2e/playwright-report/
+e2e/blob-report/
+
+# coverage
+*.out
+coverage/
+
+# editors / OS
+.DS_Store
+.idea/
+.vscode/
+
+# local env
+.env
+.env.*
+
+# local working notes
+CLAUDE.md

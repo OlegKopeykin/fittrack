@@ -1,0 +1,23 @@
+# Шаблон systemd-юнита. Установить как /etc/systemd/system/fittrack.service
+[Unit]
+Description=FitTrack workout tracker
+After=network.target
+
+[Service]
+User=fittrack
+Group=fittrack
+ExecStart=/opt/fittrack/bin/fittrack
+WorkingDirectory=/var/lib/fittrack
+Environment=FITTRACK_ADDR=127.0.0.1:8080
+Restart=on-failure
+RestartSec=2
+
+# Усиление
+NoNewPrivileges=true
+ProtectSystem=strict
+ProtectHome=true
+ReadWritePaths=/var/lib/fittrack
+PrivateTmp=true
+
+[Install]
+WantedBy=multi-user.target
