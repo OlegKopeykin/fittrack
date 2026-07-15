@@ -10,8 +10,8 @@ SELECT * FROM muscle_groups ORDER BY sort_order, name_ru;
 SELECT * FROM muscle_groups WHERE slug = ?;
 
 -- name: CreateExercise :one
-INSERT INTO exercises (owner_id, name, muscle_group_id, kind, per_arm, technique_notes, created_at)
-VALUES (?, ?, ?, ?, ?, ?, ?)
+INSERT INTO exercises (owner_id, name, muscle_group_id, kind, per_arm, technique_notes, equipment, instructions, video_url, created_at)
+VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
 RETURNING *;
 
 -- name: GetExercise :one
@@ -22,9 +22,34 @@ SELECT * FROM exercises WHERE owner_id IS NULL AND name = ?;
 
 -- name: UpdateExercise :one
 UPDATE exercises
-SET name = ?, muscle_group_id = ?, kind = ?, per_arm = ?, technique_notes = ?
+SET name = ?, muscle_group_id = ?, kind = ?, per_arm = ?, technique_notes = ?, equipment = ?, instructions = ?, video_url = ?
 WHERE id = ?
 RETURNING *;
+
+-- name: SetSecondaryMuscle :exec
+INSERT INTO exercise_secondary_muscles (exercise_id, muscle_group_id)
+VALUES (?, ?)
+ON CONFLICT DO NOTHING;
+
+-- name: ClearSecondaryMuscles :exec
+DELETE FROM exercise_secondary_muscles WHERE exercise_id = ?;
+
+-- name: ListSecondaryMuscleIDs :many
+SELECT muscle_group_id FROM exercise_secondary_muscles WHERE exercise_id = ?;
+
+-- name: SetExerciseImage :exec
+INSERT INTO exercise_images (exercise_id, content_type, bytes, updated_at)
+VALUES (?, ?, ?, ?)
+ON CONFLICT (exercise_id) DO UPDATE SET content_type = excluded.content_type, bytes = excluded.bytes, updated_at = excluded.updated_at;
+
+-- name: GetExerciseImage :one
+SELECT content_type, bytes FROM exercise_images WHERE exercise_id = ?;
+
+-- name: DeleteExerciseImage :execrows
+DELETE FROM exercise_images WHERE exercise_id = ?;
+
+-- name: HasExerciseImage :one
+SELECT EXISTS(SELECT 1 FROM exercise_images WHERE exercise_id = ?);
 
 -- name: ArchiveExercise :execrows
 UPDATE exercises SET archived_at = ? WHERE id = ?;

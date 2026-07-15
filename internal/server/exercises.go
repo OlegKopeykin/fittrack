@@ -38,15 +38,21 @@ func toMuscleGroupDTO(g gen.MuscleGroup) muscleGroupDTO {
 }
 
 type exerciseDTO struct {
-	ID             int64    `json:"id"`
-	Name           string   `json:"name"`
-	MuscleGroupID  int64    `json:"muscle_group_id"`
-	Kind           string   `json:"kind"`
-	PerArm         bool     `json:"per_arm"`
-	TechniqueNotes string   `json:"technique_notes"`
-	Global         bool     `json:"global"`
-	Archived       bool     `json:"archived"`
-	Aliases        []string `json:"aliases,omitempty"`
+	ID               int64    `json:"id"`
+	Name             string   `json:"name"`
+	MuscleGroupID    int64    `json:"muscle_group_id"`
+	SecondaryMuscles []string `json:"secondary_muscles,omitempty"`
+	Equipment        string   `json:"equipment,omitempty"`
+	Kind             string   `json:"kind"`
+	PerArm           bool     `json:"per_arm"`
+	TechniqueNotes   string   `json:"technique_notes"`
+	Instructions     string   `json:"instructions,omitempty"`
+	VideoURL         string   `json:"video_url,omitempty"`
+	HasImage         bool     `json:"has_image"`
+	ImageURL         string   `json:"image_url,omitempty"`
+	Global           bool     `json:"global"`
+	Archived         bool     `json:"archived"`
+	Aliases          []string `json:"aliases,omitempty"`
 }
 
 func toExerciseDTO(e gen.Exercise) exerciseDTO {
@@ -54,9 +60,12 @@ func toExerciseDTO(e gen.Exercise) exerciseDTO {
 		ID:             e.ID,
 		Name:           e.Name,
 		MuscleGroupID:  e.MuscleGroupID,
+		Equipment:      e.Equipment,
 		Kind:           e.Kind,
 		PerArm:         e.PerArm == 1,
 		TechniqueNotes: e.TechniqueNotes,
+		Instructions:   e.Instructions,
+		VideoURL:       e.VideoUrl,
 		Global:         !e.OwnerID.Valid,
 		Archived:       e.ArchivedAt.Valid,
 	}
@@ -130,11 +139,20 @@ func (s *server) handleListExercises(w http.ResponseWriter, r *http.Request) {
 }
 
 type exerciseInput struct {
-	Name           string `json:"name"`
-	MuscleGroup    string `json:"muscle_group"` // slug
-	Kind           string `json:"kind"`
-	PerArm         bool   `json:"per_arm"`
-	TechniqueNotes string `json:"technique_notes"`
+	Name             string   `json:"name"`
+	MuscleGroup      string   `json:"muscle_group"` // slug
+	SecondaryMuscles []string `json:"secondary_muscles"`
+	Equipment        string   `json:"equipment"` // slug
+	Kind             string   `json:"kind"`
+	PerArm           bool     `json:"per_arm"`
+	TechniqueNotes   string   `json:"technique_notes"`
+	Instructions     string   `json:"instructions"`
+	VideoURL         string   `json:"video_url"`
+}
+
+var validEquipment = map[string]bool{
+	"": true, "barbell": true, "dumbbell": true, "machine": true, "cable": true,
+	"bodyweight": true, "band": true, "kettlebell": true, "other": true, "none": true,
 }
 
 func (in exerciseInput) validate() map[string]string {
@@ -148,7 +166,38 @@ func (in exerciseInput) validate() map[string]string {
 	if in.MuscleGroup == "" {
 		f["muscle_group"] = "обязательно"
 	}
+	if !validEquipment[in.Equipment] {
+		f["equipment"] = "неизвестный снаряд"
+	}
 	return f
+}
+
+// resolveMuscleIDs переводит слаги групп в id, ошибка — на первом неизвестном.
+func (s *server) resolveMuscleIDs(r *http.Request, slugs []string) ([]int64, string) {
+	ids := make([]int64, 0, len(slugs))
+	for _, slug := range slugs {
+		g, err := s.q.GetMuscleGroupBySlug(r.Context(), slug)
+		if err != nil {
+			return nil, slug
+		}
+		ids = append(ids, g.ID)
+	}
+	return ids, ""
+}
+
+// setSecondaryMuscles заменяет набор вторичных мышц упражнения.
+func (s *server) setSecondaryMuscles(r *http.Request, exerciseID int64, ids []int64) error {
+	if err := s.q.ClearSecondaryMuscles(r.Context(), exerciseID); err != nil {
+		return err
+	}
+	for _, id := range ids {
+		if err := s.q.SetSecondaryMuscle(r.Context(), gen.SetSecondaryMuscleParams{
+			ExerciseID: exerciseID, MuscleGroupID: id,
+		}); err != nil {
+			return err
+		}
+	}
+	return nil
 }
 
 func (s *server) handleCreateExercise(w http.ResponseWriter, r *http.Request) {
@@ -165,6 +214,11 @@ func (s *server) handleCreateExercise(w http.ResponseWriter, r *http.Request) {
 		writeError(w, http.StatusBadRequest, "invalid_input", map[string]string{"muscle_group": "неизвестная группа"})
 		return
 	}
+	secIDs, bad := s.resolveMuscleIDs(r, in.SecondaryMuscles)
+	if bad != "" {
+		writeError(w, http.StatusBadRequest, "invalid_input", map[string]string{"secondary_muscles": "неизвестная группа: " + bad})
+		return
+	}
 	ex, err := s.q.CreateExercise(r.Context(), gen.CreateExerciseParams{
 		OwnerID:        nullInt(s.currentUserID(r)),
 		Name:           strings.TrimSpace(in.Name),
@@ -172,6 +226,9 @@ func (s *server) handleCreateExercise(w http.ResponseWriter, r *http.Request) {
 		Kind:           in.Kind,
 		PerArm:         boolInt(in.PerArm),
 		TechniqueNotes: in.TechniqueNotes,
+		Equipment:      in.Equipment,
+		Instructions:   in.Instructions,
+		VideoUrl:       in.VideoURL,
 		CreatedAt:      s.opts.Now().UTC().Format(time.RFC3339),
 	})
 	if err != nil {
@@ -182,7 +239,13 @@ func (s *server) handleCreateExercise(w http.ResponseWriter, r *http.Request) {
 		writeError(w, http.StatusInternalServerError, "internal", nil)
 		return
 	}
-	writeJSON(w, http.StatusCreated, toExerciseDTO(ex))
+	if err := s.setSecondaryMuscles(r, ex.ID, secIDs); err != nil {
+		writeError(w, http.StatusInternalServerError, "internal", nil)
+		return
+	}
+	dto := toExerciseDTO(ex)
+	dto.SecondaryMuscles = in.SecondaryMuscles
+	writeJSON(w, http.StatusCreated, dto)
 }
 
 // handleBulkExercises — массовая заливка упражнений (машинный API).
@@ -222,15 +285,29 @@ func (s *server) handleBulkExercises(w http.ResponseWriter, r *http.Request) {
 				map[string]string{"item": strconv.Itoa(i), "muscle_group": in.MuscleGroup})
 			return
 		}
-		if _, err := s.q.CreateExercise(r.Context(), gen.CreateExerciseParams{
+		secIDs, bad := s.resolveMuscleIDs(r, in.SecondaryMuscles)
+		if bad != "" {
+			writeError(w, http.StatusBadRequest, "invalid_input",
+				map[string]string{"item": strconv.Itoa(i), "secondary_muscles": bad})
+			return
+		}
+		ex, err := s.q.CreateExercise(r.Context(), gen.CreateExerciseParams{
 			OwnerID:        nullInt(uid),
 			Name:           strings.TrimSpace(in.Name),
 			MuscleGroupID:  g.ID,
 			Kind:           in.Kind,
 			PerArm:         boolInt(in.PerArm),
 			TechniqueNotes: in.TechniqueNotes,
+			Equipment:      in.Equipment,
+			Instructions:   in.Instructions,
+			VideoUrl:       in.VideoURL,
 			CreatedAt:      now,
-		}); err != nil {
+		})
+		if err != nil {
+			writeError(w, http.StatusInternalServerError, "internal", nil)
+			return
+		}
+		if err := s.setSecondaryMuscles(r, ex.ID, secIDs); err != nil {
 			writeError(w, http.StatusInternalServerError, "internal", nil)
 			return
 		}
@@ -278,6 +355,24 @@ func (s *server) handleGetExercise(w http.ResponseWriter, r *http.Request) {
 	for _, a := range aliases {
 		dto.Aliases = append(dto.Aliases, a.Alias)
 	}
+
+	if secIDs, err := s.q.ListSecondaryMuscleIDs(r.Context(), ex.ID); err == nil && len(secIDs) > 0 {
+		groups, _ := s.q.ListMuscleGroups(r.Context())
+		slugByID := make(map[int64]string, len(groups))
+		for _, g := range groups {
+			slugByID[g.ID] = g.Slug
+		}
+		for _, id := range secIDs {
+			if slug := slugByID[id]; slug != "" {
+				dto.SecondaryMuscles = append(dto.SecondaryMuscles, slug)
+			}
+		}
+	}
+
+	if has, _ := s.q.HasExerciseImage(r.Context(), ex.ID); has {
+		dto.HasImage = true
+		dto.ImageURL = "/api/v1/exercises/" + strconv.FormatInt(ex.ID, 10) + "/image"
+	}
 	writeJSON(w, http.StatusOK, dto)
 }
 
@@ -303,19 +398,33 @@ func (s *server) handleUpdateExercise(w http.ResponseWriter, r *http.Request) {
 		writeError(w, http.StatusBadRequest, "invalid_input", map[string]string{"muscle_group": "неизвестная группа"})
 		return
 	}
+	secIDs, bad := s.resolveMuscleIDs(r, in.SecondaryMuscles)
+	if bad != "" {
+		writeError(w, http.StatusBadRequest, "invalid_input", map[string]string{"secondary_muscles": "неизвестная группа: " + bad})
+		return
+	}
 	upd, err := s.q.UpdateExercise(r.Context(), gen.UpdateExerciseParams{
 		Name:           strings.TrimSpace(in.Name),
 		MuscleGroupID:  g.ID,
 		Kind:           in.Kind,
 		PerArm:         boolInt(in.PerArm),
 		TechniqueNotes: in.TechniqueNotes,
+		Equipment:      in.Equipment,
+		Instructions:   in.Instructions,
+		VideoUrl:       in.VideoURL,
 		ID:             ex.ID,
 	})
 	if err != nil {
 		writeError(w, http.StatusInternalServerError, "internal", nil)
 		return
 	}
-	writeJSON(w, http.StatusOK, toExerciseDTO(upd))
+	if err := s.setSecondaryMuscles(r, ex.ID, secIDs); err != nil {
+		writeError(w, http.StatusInternalServerError, "internal", nil)
+		return
+	}
+	dto := toExerciseDTO(upd)
+	dto.SecondaryMuscles = in.SecondaryMuscles
+	writeJSON(w, http.StatusOK, dto)
 }
 
 func (s *server) handleArchiveExercise(w http.ResponseWriter, r *http.Request) {

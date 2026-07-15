@@ -51,6 +51,15 @@ func (q *Queries) ArchiveExercise(ctx context.Context, arg ArchiveExerciseParams
 	return result.RowsAffected()
 }
 
+const clearSecondaryMuscles = `-- name: ClearSecondaryMuscles :exec
+DELETE FROM exercise_secondary_muscles WHERE exercise_id = ?
+`
+
+func (q *Queries) ClearSecondaryMuscles(ctx context.Context, exerciseID int64) error {
+	_, err := q.db.ExecContext(ctx, clearSecondaryMuscles, exerciseID)
+	return err
+}
+
 const countAlias = `-- name: CountAlias :one
 SELECT COUNT(*) FROM exercise_aliases WHERE exercise_id = ? AND alias_norm = ?
 `
@@ -107,9 +116,9 @@ func (q *Queries) CreateApiToken(ctx context.Context, arg CreateApiTokenParams) 
 }
 
 const createExercise = `-- name: CreateExercise :one
-INSERT INTO exercises (owner_id, name, muscle_group_id, kind, per_arm, technique_notes, created_at)
-VALUES (?, ?, ?, ?, ?, ?, ?)
-RETURNING id, owner_id, name, muscle_group_id, kind, per_arm, technique_notes, archived_at, created_at
+INSERT INTO exercises (owner_id, name, muscle_group_id, kind, per_arm, technique_notes, equipment, instructions, video_url, created_at)
+VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+RETURNING id, owner_id, name, muscle_group_id, kind, per_arm, technique_notes, archived_at, created_at, equipment, instructions, video_url
 `
 
 type CreateExerciseParams struct {
@@ -119,6 +128,9 @@ type CreateExerciseParams struct {
 	Kind           string
 	PerArm         int64
 	TechniqueNotes string
+	Equipment      string
+	Instructions   string
+	VideoUrl       string
 	CreatedAt      string
 }
 
@@ -130,6 +142,9 @@ func (q *Queries) CreateExercise(ctx context.Context, arg CreateExerciseParams) 
 		arg.Kind,
 		arg.PerArm,
 		arg.TechniqueNotes,
+		arg.Equipment,
+		arg.Instructions,
+		arg.VideoUrl,
 		arg.CreatedAt,
 	)
 	var i Exercise
@@ -143,6 +158,9 @@ func (q *Queries) CreateExercise(ctx context.Context, arg CreateExerciseParams) 
 		&i.TechniqueNotes,
 		&i.ArchivedAt,
 		&i.CreatedAt,
+		&i.Equipment,
+		&i.Instructions,
+		&i.VideoUrl,
 	)
 	return i, err
 }
@@ -158,6 +176,18 @@ type DeleteAliasParams struct {
 
 func (q *Queries) DeleteAlias(ctx context.Context, arg DeleteAliasParams) (int64, error) {
 	result, err := q.db.ExecContext(ctx, deleteAlias, arg.ID, arg.ExerciseID)
+	if err != nil {
+		return 0, err
+	}
+	return result.RowsAffected()
+}
+
+const deleteExerciseImage = `-- name: DeleteExerciseImage :execrows
+DELETE FROM exercise_images WHERE exercise_id = ?
+`
+
+func (q *Queries) DeleteExerciseImage(ctx context.Context, exerciseID int64) (int64, error) {
+	result, err := q.db.ExecContext(ctx, deleteExerciseImage, exerciseID)
 	if err != nil {
 		return 0, err
 	}
@@ -186,7 +216,7 @@ func (q *Queries) GetApiTokenByHash(ctx context.Context, tokenHash string) (ApiT
 }
 
 const getExercise = `-- name: GetExercise :one
-SELECT id, owner_id, name, muscle_group_id, kind, per_arm, technique_notes, archived_at, created_at FROM exercises WHERE id = ?
+SELECT id, owner_id, name, muscle_group_id, kind, per_arm, technique_notes, archived_at, created_at, equipment, instructions, video_url FROM exercises WHERE id = ?
 `
 
 func (q *Queries) GetExercise(ctx context.Context, id int64) (Exercise, error) {
@@ -202,12 +232,31 @@ func (q *Queries) GetExercise(ctx context.Context, id int64) (Exercise, error) {
 		&i.TechniqueNotes,
 		&i.ArchivedAt,
 		&i.CreatedAt,
+		&i.Equipment,
+		&i.Instructions,
+		&i.VideoUrl,
 	)
 	return i, err
 }
 
+const getExerciseImage = `-- name: GetExerciseImage :one
+SELECT content_type, bytes FROM exercise_images WHERE exercise_id = ?
+`
+
+type GetExerciseImageRow struct {
+	ContentType string
+	Bytes       []byte
+}
+
+func (q *Queries) GetExerciseImage(ctx context.Context, exerciseID int64) (GetExerciseImageRow, error) {
+	row := q.db.QueryRowContext(ctx, getExerciseImage, exerciseID)
+	var i GetExerciseImageRow
+	err := row.Scan(&i.ContentType, &i.Bytes)
+	return i, err
+}
+
 const getGlobalExerciseByName = `-- name: GetGlobalExerciseByName :one
-SELECT id, owner_id, name, muscle_group_id, kind, per_arm, technique_notes, archived_at, created_at FROM exercises WHERE owner_id IS NULL AND name = ?
+SELECT id, owner_id, name, muscle_group_id, kind, per_arm, technique_notes, archived_at, created_at, equipment, instructions, video_url FROM exercises WHERE owner_id IS NULL AND name = ?
 `
 
 func (q *Queries) GetGlobalExerciseByName(ctx context.Context, name string) (Exercise, error) {
@@ -223,6 +272,9 @@ func (q *Queries) GetGlobalExerciseByName(ctx context.Context, name string) (Exe
 		&i.TechniqueNotes,
 		&i.ArchivedAt,
 		&i.CreatedAt,
+		&i.Equipment,
+		&i.Instructions,
+		&i.VideoUrl,
 	)
 	return i, err
 }
@@ -243,6 +295,17 @@ func (q *Queries) GetMuscleGroupBySlug(ctx context.Context, slug string) (Muscle
 		&i.SortOrder,
 	)
 	return i, err
+}
+
+const hasExerciseImage = `-- name: HasExerciseImage :one
+SELECT EXISTS(SELECT 1 FROM exercise_images WHERE exercise_id = ?)
+`
+
+func (q *Queries) HasExerciseImage(ctx context.Context, exerciseID int64) (bool, error) {
+	row := q.db.QueryRowContext(ctx, hasExerciseImage, exerciseID)
+	var exists bool
+	err := row.Scan(&exists)
+	return exists, err
 }
 
 const insertMuscleGroup = `-- name: InsertMuscleGroup :one
@@ -349,7 +412,7 @@ func (q *Queries) ListApiTokens(ctx context.Context, userID int64) ([]ApiToken, 
 }
 
 const listExercisesForUser = `-- name: ListExercisesForUser :many
-SELECT id, owner_id, name, muscle_group_id, kind, per_arm, technique_notes, archived_at, created_at FROM exercises
+SELECT id, owner_id, name, muscle_group_id, kind, per_arm, technique_notes, archived_at, created_at, equipment, instructions, video_url FROM exercises
 WHERE (owner_id IS NULL OR owner_id = ?)
 ORDER BY name
 `
@@ -373,6 +436,9 @@ func (q *Queries) ListExercisesForUser(ctx context.Context, ownerID sql.NullInt6
 			&i.TechniqueNotes,
 			&i.ArchivedAt,
 			&i.CreatedAt,
+			&i.Equipment,
+			&i.Instructions,
+			&i.VideoUrl,
 		); err != nil {
 			return nil, err
 		}
@@ -411,6 +477,33 @@ func (q *Queries) ListMuscleGroups(ctx context.Context) ([]MuscleGroup, error) {
 			return nil, err
 		}
 		items = append(items, i)
+	}
+	if err := rows.Close(); err != nil {
+		return nil, err
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
+const listSecondaryMuscleIDs = `-- name: ListSecondaryMuscleIDs :many
+SELECT muscle_group_id FROM exercise_secondary_muscles WHERE exercise_id = ?
+`
+
+func (q *Queries) ListSecondaryMuscleIDs(ctx context.Context, exerciseID int64) ([]int64, error) {
+	rows, err := q.db.QueryContext(ctx, listSecondaryMuscleIDs, exerciseID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []int64
+	for rows.Next() {
+		var muscle_group_id int64
+		if err := rows.Scan(&muscle_group_id); err != nil {
+			return nil, err
+		}
+		items = append(items, muscle_group_id)
 	}
 	if err := rows.Close(); err != nil {
 		return nil, err
@@ -466,6 +559,45 @@ func (q *Queries) SearchAliasExerciseIDs(ctx context.Context, aliasNorm string) 
 	return items, nil
 }
 
+const setExerciseImage = `-- name: SetExerciseImage :exec
+INSERT INTO exercise_images (exercise_id, content_type, bytes, updated_at)
+VALUES (?, ?, ?, ?)
+ON CONFLICT (exercise_id) DO UPDATE SET content_type = excluded.content_type, bytes = excluded.bytes, updated_at = excluded.updated_at
+`
+
+type SetExerciseImageParams struct {
+	ExerciseID  int64
+	ContentType string
+	Bytes       []byte
+	UpdatedAt   string
+}
+
+func (q *Queries) SetExerciseImage(ctx context.Context, arg SetExerciseImageParams) error {
+	_, err := q.db.ExecContext(ctx, setExerciseImage,
+		arg.ExerciseID,
+		arg.ContentType,
+		arg.Bytes,
+		arg.UpdatedAt,
+	)
+	return err
+}
+
+const setSecondaryMuscle = `-- name: SetSecondaryMuscle :exec
+INSERT INTO exercise_secondary_muscles (exercise_id, muscle_group_id)
+VALUES (?, ?)
+ON CONFLICT DO NOTHING
+`
+
+type SetSecondaryMuscleParams struct {
+	ExerciseID    int64
+	MuscleGroupID int64
+}
+
+func (q *Queries) SetSecondaryMuscle(ctx context.Context, arg SetSecondaryMuscleParams) error {
+	_, err := q.db.ExecContext(ctx, setSecondaryMuscle, arg.ExerciseID, arg.MuscleGroupID)
+	return err
+}
+
 const touchApiToken = `-- name: TouchApiToken :exec
 UPDATE api_tokens SET last_used_at = ? WHERE id = ?
 `
@@ -482,9 +614,9 @@ func (q *Queries) TouchApiToken(ctx context.Context, arg TouchApiTokenParams) er
 
 const updateExercise = `-- name: UpdateExercise :one
 UPDATE exercises
-SET name = ?, muscle_group_id = ?, kind = ?, per_arm = ?, technique_notes = ?
+SET name = ?, muscle_group_id = ?, kind = ?, per_arm = ?, technique_notes = ?, equipment = ?, instructions = ?, video_url = ?
 WHERE id = ?
-RETURNING id, owner_id, name, muscle_group_id, kind, per_arm, technique_notes, archived_at, created_at
+RETURNING id, owner_id, name, muscle_group_id, kind, per_arm, technique_notes, archived_at, created_at, equipment, instructions, video_url
 `
 
 type UpdateExerciseParams struct {
@@ -493,6 +625,9 @@ type UpdateExerciseParams struct {
 	Kind           string
 	PerArm         int64
 	TechniqueNotes string
+	Equipment      string
+	Instructions   string
+	VideoUrl       string
 	ID             int64
 }
 
@@ -503,6 +638,9 @@ func (q *Queries) UpdateExercise(ctx context.Context, arg UpdateExerciseParams) 
 		arg.Kind,
 		arg.PerArm,
 		arg.TechniqueNotes,
+		arg.Equipment,
+		arg.Instructions,
+		arg.VideoUrl,
 		arg.ID,
 	)
 	var i Exercise
@@ -516,6 +654,9 @@ func (q *Queries) UpdateExercise(ctx context.Context, arg UpdateExerciseParams) 
 		&i.TechniqueNotes,
 		&i.ArchivedAt,
 		&i.CreatedAt,
+		&i.Equipment,
+		&i.Instructions,
+		&i.VideoUrl,
 	)
 	return i, err
 }
