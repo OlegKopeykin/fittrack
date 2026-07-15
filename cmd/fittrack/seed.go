@@ -37,19 +37,78 @@ func seedE2E(conn *sql.DB) error {
 		return err
 	}
 
-	if _, err := q.GetUserByUsername(ctx, e2eUsername); errors.Is(err, sql.ErrNoRows) {
-		hash, err := auth.HashPassword(e2ePassword)
+	user, err := q.GetUserByUsername(ctx, e2eUsername)
+	if errors.Is(err, sql.ErrNoRows) {
+		hash, hErr := auth.HashPassword(e2ePassword)
+		if hErr != nil {
+			return hErr
+		}
+		user, err = q.CreateUser(ctx, gen.CreateUserParams{
+			Username: e2eUsername, PasswordHash: hash, Role: "owner", CreatedAt: now,
+		})
 		if err != nil {
 			return err
 		}
-		if _, err := q.CreateUser(ctx, gen.CreateUserParams{
-			Username: e2eUsername, PasswordHash: hash, Role: "owner", CreatedAt: now,
-		}); err != nil {
+		slog.Info("e2e: создан пользователь", "username", e2eUsername)
+		if err := seedE2ETraining(ctx, q, user.ID, now); err != nil {
 			return err
 		}
-		slog.Info("e2e: создан пользователь", "username", e2eUsername)
 	} else if err != nil {
 		return err
 	}
 	return nil
+}
+
+// seedE2ETraining — демо-программа и тренировка для показа экранов.
+func seedE2ETraining(ctx context.Context, q *gen.Queries, uid int64, now string) error {
+	ex, err := q.GetGlobalExerciseByName(ctx, "Присед в Смите")
+	if err != nil {
+		return err
+	}
+	prog, err := q.CreateProgram(ctx, gen.CreateProgramParams{
+		UserID: uid, Name: "Демо-программа", Description: "пример", CreatedAt: now,
+	})
+	if err != nil {
+		return err
+	}
+	day, err := q.CreateProgramDay(ctx, gen.CreateProgramDayParams{
+		ProgramID: prog.ID, Position: 0, Name: "День 1",
+	})
+	if err != nil {
+		return err
+	}
+	if _, err := q.CreatePrescription(ctx, gen.CreatePrescriptionParams{
+		ProgramDayID: day.ID, ExerciseID: ex.ID, Position: 0, Sets: 3,
+		RepMin: sql.NullInt64{Int64: 6, Valid: true}, RepMax: sql.NullInt64{Int64: 10, Valid: true},
+		WeightMinG: sql.NullInt64{Int64: 70000, Valid: true}, WeightMaxG: sql.NullInt64{Int64: 90000, Valid: true},
+	}); err != nil {
+		return err
+	}
+
+	wk, err := q.CreateWorkout(ctx, gen.CreateWorkoutParams{
+		UserID: uid, Date: "2026-05-10", StartedAt: sql.NullString{String: now, Valid: true},
+		BodyweightG: sql.NullInt64{Int64: 86500, Valid: true}, Feeling: "бодро",
+		CreatedAt: now, UpdatedAt: now,
+	})
+	if err != nil {
+		return err
+	}
+	sets := []struct {
+		w, r int64
+		role string
+	}{{40000, 12, "warmup"}, {60000, 12, "working"}, {62000, 7, "working"}}
+	for i, s := range sets {
+		if _, err := q.CreateSet(ctx, gen.CreateSetParams{
+			WorkoutID: wk.ID, ExerciseID: ex.ID, Position: int64(i), Role: s.role,
+			WeightG: sql.NullInt64{Int64: s.w, Valid: true}, Reps: sql.NullInt64{Int64: s.r, Valid: true},
+		}); err != nil {
+			return err
+		}
+	}
+	_, err = q.UpdateWorkout(ctx, gen.UpdateWorkoutParams{
+		Date: "2026-05-10", FinishedAt: sql.NullString{String: now, Valid: true},
+		BodyweightG: sql.NullInt64{Int64: 86500, Valid: true}, Feeling: "бодро",
+		UpdatedAt: now, ID: wk.ID,
+	})
+	return err
 }
