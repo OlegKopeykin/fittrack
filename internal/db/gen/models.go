@@ -30,6 +30,9 @@ type Exercise struct {
 	TechniqueNotes string
 	ArchivedAt     sql.NullString
 	CreatedAt      string
+	Equipment      string
+	Instructions   string
+	VideoUrl       string
 }
 
 type ExerciseAlias struct {
@@ -37,6 +40,18 @@ type ExerciseAlias struct {
 	ExerciseID int64
 	Alias      string
 	AliasNorm  string
+}
+
+type ExerciseImage struct {
+	ExerciseID  int64
+	ContentType string
+	Bytes       []byte
+	UpdatedAt   string
+}
+
+type ExerciseSecondaryMuscle struct {
+	ExerciseID    int64
+	MuscleGroupID int64
 }
 
 type Invite struct {

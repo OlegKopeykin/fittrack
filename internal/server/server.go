@@ -83,6 +83,9 @@ func New(opts Options) http.Handler {
 				priv.Patch("/exercises/{id}", s.handleUpdateExercise)
 				priv.Delete("/exercises/{id}", s.handleArchiveExercise)
 				priv.Post("/exercises/{id}/aliases", s.handleAddAlias)
+				priv.Put("/exercises/{id}/image", s.handleSetExerciseImage)
+				priv.Get("/exercises/{id}/image", s.handleGetExerciseImage)
+				priv.Delete("/exercises/{id}/image", s.handleDeleteExerciseImage)
 				priv.Get("/exercises/{id}/history", s.handleExerciseHistory)
 
 				// Дневник тренировок (cookie или bearer).

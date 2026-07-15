@@ -116,9 +116,14 @@ func (s *server) csrfGuard(next http.Handler) http.Handler {
 			return
 		}
 
+		// Отклоняем только «простые» content-type, которые кросс-сайтовая
+		// <form> может отправить без preflight (единственный CSRF-вектор).
+		// JSON, image/* и прочие не-простые типы проходят (их защищает
+		// CORS-preflight + проверка Origin выше).
 		if r.ContentLength > 0 {
-			mt, _, err := mime.ParseMediaType(r.Header.Get("Content-Type"))
-			if err != nil || mt != "application/json" {
+			mt, _, _ := mime.ParseMediaType(r.Header.Get("Content-Type"))
+			switch mt {
+			case "", "text/plain", "application/x-www-form-urlencoded", "multipart/form-data":
 				writeError(w, http.StatusUnsupportedMediaType, "unsupported_media_type", nil)
 				return
 			}
