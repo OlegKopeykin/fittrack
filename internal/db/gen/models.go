@@ -65,6 +65,21 @@ type Session struct {
 	Expiry float64
 }
 
+type Set struct {
+	ID          int64
+	WorkoutID   int64
+	ExerciseID  int64
+	Position    int64
+	Role        string
+	WeightG     sql.NullInt64
+	Reps        sql.NullInt64
+	DistanceM   sql.NullInt64
+	DurationSec sql.NullInt64
+	Note        string
+	ClientID    sql.NullString
+	CreatedAt   string
+}
+
 type User struct {
 	ID           int64
 	Username     string
@@ -72,4 +87,17 @@ type User struct {
 	DisplayName  string
 	Role         string
 	CreatedAt    string
+}
+
+type Workout struct {
+	ID          int64
+	UserID      int64
+	Date        string
+	StartedAt   sql.NullString
+	FinishedAt  sql.NullString
+	BodyweightG sql.NullInt64
+	Feeling     string
+	Notes       string
+	CreatedAt   string
+	UpdatedAt   string
 }
