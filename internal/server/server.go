@@ -83,6 +83,17 @@ func New(opts Options) http.Handler {
 				priv.Patch("/exercises/{id}", s.handleUpdateExercise)
 				priv.Delete("/exercises/{id}", s.handleArchiveExercise)
 				priv.Post("/exercises/{id}/aliases", s.handleAddAlias)
+				priv.Get("/exercises/{id}/history", s.handleExerciseHistory)
+
+				// Дневник тренировок (cookie или bearer).
+				priv.Post("/workouts", s.handleCreateWorkout)
+				priv.Get("/workouts", s.handleListWorkouts)
+				priv.Get("/workouts/{id}", s.handleGetWorkout)
+				priv.Patch("/workouts/{id}", s.handleUpdateWorkout)
+				priv.Delete("/workouts/{id}", s.handleDeleteWorkout)
+				priv.Post("/workouts/{id}/sets", s.handleAddSet)
+				priv.Patch("/sets/{id}", s.handleUpdateSet)
+				priv.Delete("/sets/{id}", s.handleDeleteSet)
 
 				// Персональные API-токены (только из cookie-сессии).
 				priv.Get("/tokens", s.handleListTokens)
