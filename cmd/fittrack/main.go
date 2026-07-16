@@ -38,12 +38,7 @@ func main() {
 		os.Exit(1)
 	}
 
-	if os.Getenv("FITTRACK_E2E_SEED") == "1" {
-		if err := seedE2E(conn); err != nil {
-			slog.Error("e2e seed", "err", err)
-			os.Exit(1)
-		}
-	}
+	maybeSeedE2E(conn)
 
 	static, embedded := web.DistFS()
 	if !embedded {
