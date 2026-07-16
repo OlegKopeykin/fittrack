@@ -1,8 +1,10 @@
+import { useState } from 'react'
 import { Link, useParams } from 'react-router-dom'
 import { useWorkout, useExerciseMap } from '../training/useTraining'
 import { PageHeader } from '../components/AppShell'
 import { formatDate, formatSet } from '../lib/format'
 import type { WorkoutSet } from '../api/training'
+import WorkoutLogger from '../training/WorkoutLogger'
 
 const roleLabel: Record<string, string> = { warmup: 'разминка', ramp: 'подводящий', working: '' }
 
@@ -10,6 +12,12 @@ export default function WorkoutDetailPage() {
   const { id } = useParams()
   const workout = useWorkout(Number(id))
   const exMap = useExerciseMap()
+  const [editing, setEditing] = useState(false)
+
+  // Активная (не завершённая) или явно открытая на правку — интерактивный логгер.
+  if (workout.data && (!workout.data.finished_at || editing)) {
+    return <WorkoutLogger workout={workout.data} />
+  }
 
   const sets = workout.data?.sets ?? []
   // группируем подряд идущие подходы одного упражнения
@@ -25,9 +33,20 @@ export default function WorkoutDetailPage() {
       <PageHeader
         title={workout.data?.title || (workout.data ? formatDate(workout.data.date) : 'Тренировка')}
         right={
-          <Link to="/workouts" className="text-sm text-slate-400">
-            ‹ Назад
-          </Link>
+          <div className="flex items-center gap-2">
+            {workout.data && (
+              <button
+                type="button"
+                onClick={() => setEditing(true)}
+                className="rounded-lg border border-slate-700 px-3 py-1.5 text-sm font-semibold text-slate-300"
+              >
+                Редактировать
+              </button>
+            )}
+            <Link to="/workouts" className="text-sm text-slate-400">
+              ‹ Назад
+            </Link>
+          </div>
         }
       />
       <div className="mx-auto max-w-3xl px-5 py-4">
