@@ -275,6 +275,49 @@ func (s *server) handleGetProgram(w http.ResponseWriter, r *http.Request) {
 	writeJSON(w, http.StatusOK, dto)
 }
 
+type programDayDetailDTO struct {
+	ID          int64             `json:"id"`
+	ProgramID   int64             `json:"program_id"`
+	ProgramName string            `json:"program_name"`
+	Position    int64             `json:"position"`
+	Name        string            `json:"name"`
+	Notes       string            `json:"notes,omitempty"`
+	Exercises   []prescriptionDTO `json:"exercises"`
+}
+
+// handleGetProgramDay — день программы с предписаниями. Нужен экрану
+// логирования, чтобы показать цели по подходам для дня-источника тренировки.
+func (s *server) handleGetProgramDay(w http.ResponseWriter, r *http.Request) {
+	id, err := strconv.ParseInt(chi.URLParam(r, "id"), 10, 64)
+	if err != nil {
+		writeError(w, http.StatusNotFound, "not_found", nil)
+		return
+	}
+	d, err := s.q.GetProgramDay(r.Context(), id)
+	if errors.Is(err, sql.ErrNoRows) || (err == nil && d.OwnerID != s.currentUserID(r)) {
+		writeError(w, http.StatusNotFound, "not_found", nil)
+		return
+	}
+	if err != nil {
+		writeError(w, http.StatusInternalServerError, "internal", nil)
+		return
+	}
+	dto := programDayDetailDTO{
+		ID: d.ID, ProgramID: d.ProgramID, ProgramName: d.ProgramName,
+		Position: d.Position, Name: d.Name, Notes: d.Notes,
+	}
+	rx, err := s.q.ListPrescriptionsForDay(r.Context(), d.ID)
+	if err != nil {
+		writeError(w, http.StatusInternalServerError, "internal", nil)
+		return
+	}
+	dto.Exercises = make([]prescriptionDTO, 0, len(rx))
+	for _, p := range rx {
+		dto.Exercises = append(dto.Exercises, toPrescriptionDTO(p))
+	}
+	writeJSON(w, http.StatusOK, dto)
+}
+
 func (s *server) handleDeleteProgram(w http.ResponseWriter, r *http.Request) {
 	prog, ok := s.programForUser(w, r)
 	if !ok {

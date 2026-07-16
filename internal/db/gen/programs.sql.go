@@ -160,6 +160,37 @@ func (q *Queries) GetProgram(ctx context.Context, id int64) (Program, error) {
 	return i, err
 }
 
+const getProgramDay = `-- name: GetProgramDay :one
+SELECT d.id, d.program_id, d.position, d.name, d.notes, p.user_id AS owner_id, p.name AS program_name
+FROM program_days d JOIN programs p ON p.id = d.program_id
+WHERE d.id = ?
+`
+
+type GetProgramDayRow struct {
+	ID          int64
+	ProgramID   int64
+	Position    int64
+	Name        string
+	Notes       string
+	OwnerID     int64
+	ProgramName string
+}
+
+func (q *Queries) GetProgramDay(ctx context.Context, id int64) (GetProgramDayRow, error) {
+	row := q.db.QueryRowContext(ctx, getProgramDay, id)
+	var i GetProgramDayRow
+	err := row.Scan(
+		&i.ID,
+		&i.ProgramID,
+		&i.Position,
+		&i.Name,
+		&i.Notes,
+		&i.OwnerID,
+		&i.ProgramName,
+	)
+	return i, err
+}
+
 const listArchivedProgramsForUser = `-- name: ListArchivedProgramsForUser :many
 SELECT id, user_id, name, description, archived_at, created_at FROM programs
 WHERE user_id = ? AND archived_at IS NOT NULL

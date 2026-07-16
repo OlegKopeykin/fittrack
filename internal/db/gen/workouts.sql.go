@@ -63,21 +63,22 @@ func (q *Queries) CreateSet(ctx context.Context, arg CreateSetParams) (Set, erro
 }
 
 const createWorkout = `-- name: CreateWorkout :one
-INSERT INTO workouts (user_id, date, title, started_at, bodyweight_g, feeling, notes, created_at, updated_at)
-VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+INSERT INTO workouts (user_id, date, title, program_day_id, started_at, bodyweight_g, feeling, notes, created_at, updated_at)
+VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
 RETURNING id, user_id, date, started_at, finished_at, bodyweight_g, feeling, notes, created_at, updated_at, program_day_id, title
 `
 
 type CreateWorkoutParams struct {
-	UserID      int64
-	Date        string
-	Title       string
-	StartedAt   sql.NullString
-	BodyweightG sql.NullInt64
-	Feeling     string
-	Notes       string
-	CreatedAt   string
-	UpdatedAt   string
+	UserID       int64
+	Date         string
+	Title        string
+	ProgramDayID sql.NullInt64
+	StartedAt    sql.NullString
+	BodyweightG  sql.NullInt64
+	Feeling      string
+	Notes        string
+	CreatedAt    string
+	UpdatedAt    string
 }
 
 func (q *Queries) CreateWorkout(ctx context.Context, arg CreateWorkoutParams) (Workout, error) {
@@ -85,6 +86,7 @@ func (q *Queries) CreateWorkout(ctx context.Context, arg CreateWorkoutParams) (W
 		arg.UserID,
 		arg.Date,
 		arg.Title,
+		arg.ProgramDayID,
 		arg.StartedAt,
 		arg.BodyweightG,
 		arg.Feeling,

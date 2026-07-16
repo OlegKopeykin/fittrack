@@ -30,6 +30,11 @@ RETURNING *;
 -- name: ListProgramDays :many
 SELECT * FROM program_days WHERE program_id = ? ORDER BY position;
 
+-- name: GetProgramDay :one
+SELECT d.id, d.program_id, d.position, d.name, d.notes, p.user_id AS owner_id, p.name AS program_name
+FROM program_days d JOIN programs p ON p.id = d.program_id
+WHERE d.id = ?;
+
 -- name: CreatePrescription :one
 INSERT INTO prescriptions (program_day_id, exercise_id, position, sets, rep_min, rep_max, weight_min_g, weight_max_g, rest_sec, tempo, notes)
 VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
