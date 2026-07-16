@@ -147,6 +147,50 @@ func TestAddSetAndReadBack(t *testing.T) {
 	}
 }
 
+func TestUpdateSetPartialPreservesFields(t *testing.T) {
+	ts := testutil.NewTestServer(t, nil)
+	ownerSession(t, ts)
+	wid := newWorkout(t, ts)
+	ex := anExerciseID(t, ts, "Присед")
+
+	resp := ts.PostJSON(t, "/api/v1/workouts/"+itoa(wid)+"/sets", map[string]any{
+		"exercise_id": ex, "role": "working", "weight_kg": 80.0, "reps": 5, "note": "легко",
+	})
+	if resp.StatusCode != http.StatusCreated {
+		t.Fatalf("add set: status = %d, want 201", resp.StatusCode)
+	}
+	var st struct {
+		ID int64 `json:"id"`
+	}
+	testutil.DecodeJSON(t, resp, &st)
+
+	// Частичный PATCH: меняем только role. Вес, повторы и заметку не шлём —
+	// они не должны обнулиться.
+	upd := patchJSON(t, ts, "/api/v1/sets/"+itoa(st.ID), map[string]any{"role": "warmup"})
+	if upd.StatusCode != http.StatusOK {
+		t.Fatalf("patch set: status = %d, want 200", upd.StatusCode)
+	}
+	var got struct {
+		Role     string   `json:"role"`
+		WeightKg *float64 `json:"weight_kg"`
+		Reps     *int     `json:"reps"`
+		Note     string   `json:"note"`
+	}
+	testutil.DecodeJSON(t, upd, &got)
+	if got.Role != "warmup" {
+		t.Errorf("role = %q, want warmup", got.Role)
+	}
+	if got.WeightKg == nil || *got.WeightKg != 80.0 {
+		t.Errorf("weight_kg = %v, want 80 (частичный PATCH не должен затирать)", got.WeightKg)
+	}
+	if got.Reps == nil || *got.Reps != 5 {
+		t.Errorf("reps = %v, want 5 (частичный PATCH не должен затирать)", got.Reps)
+	}
+	if got.Note != "легко" {
+		t.Errorf("note = %q, want «легко» (частичный PATCH не должен затирать)", got.Note)
+	}
+}
+
 func TestSetIdempotentByClientID(t *testing.T) {
 	ts := testutil.NewTestServer(t, nil)
 	ownerSession(t, ts)
