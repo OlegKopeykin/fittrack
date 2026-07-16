@@ -21,8 +21,8 @@ export function usePrograms(archived = false) {
   })
 }
 
-export function useProgram(id: number) {
-  return useQuery({ queryKey: ['program', id], queryFn: () => trainingApi.program(id) })
+export function useProgram(id: number, enabled = true) {
+  return useQuery({ queryKey: ['program', id], queryFn: () => trainingApi.program(id), enabled })
 }
 
 // useExerciseMap — id -> упражнение (для подписей подходов/предписаний).
@@ -51,6 +51,17 @@ export function useCreateProgram() {
   return useMutation({
     mutationFn: (body: NewProgram) => trainingApi.createProgram(body),
     onSuccess: () => qc.invalidateQueries({ queryKey: ['programs'] }),
+  })
+}
+
+export function useUpdateProgram(id: number) {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: (body: NewProgram) => trainingApi.updateProgram(id, body),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['programs'] })
+      qc.invalidateQueries({ queryKey: ['program', id] })
+    },
   })
 }
 

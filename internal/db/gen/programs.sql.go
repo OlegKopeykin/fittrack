@@ -142,6 +142,15 @@ func (q *Queries) DeleteProgram(ctx context.Context, arg DeleteProgramParams) (i
 	return result.RowsAffected()
 }
 
+const deleteProgramDays = `-- name: DeleteProgramDays :exec
+DELETE FROM program_days WHERE program_id = ?
+`
+
+func (q *Queries) DeleteProgramDays(ctx context.Context, programID int64) error {
+	_, err := q.db.ExecContext(ctx, deleteProgramDays, programID)
+	return err
+}
+
 const getProgram = `-- name: GetProgram :one
 SELECT id, user_id, name, description, archived_at, created_at FROM programs WHERE id = ?
 `
@@ -348,6 +357,30 @@ type SetProgramArchivedParams struct {
 
 func (q *Queries) SetProgramArchived(ctx context.Context, arg SetProgramArchivedParams) (int64, error) {
 	result, err := q.db.ExecContext(ctx, setProgramArchived, arg.ArchivedAt, arg.ID, arg.UserID)
+	if err != nil {
+		return 0, err
+	}
+	return result.RowsAffected()
+}
+
+const updateProgram = `-- name: UpdateProgram :execrows
+UPDATE programs SET name = ?, description = ? WHERE id = ? AND user_id = ?
+`
+
+type UpdateProgramParams struct {
+	Name        string
+	Description string
+	ID          int64
+	UserID      int64
+}
+
+func (q *Queries) UpdateProgram(ctx context.Context, arg UpdateProgramParams) (int64, error) {
+	result, err := q.db.ExecContext(ctx, updateProgram,
+		arg.Name,
+		arg.Description,
+		arg.ID,
+		arg.UserID,
+	)
 	if err != nil {
 		return 0, err
 	}

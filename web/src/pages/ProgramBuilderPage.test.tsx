@@ -13,6 +13,7 @@ function render(path = '/programs/new') {
   renderApp(
     <Routes>
       <Route path="/programs/new" element={<ProgramBuilderPage />} />
+      <Route path="/programs/:id/edit" element={<ProgramBuilderPage />} />
       <Route path="/program/:id" element={<div>Экран программы 700</div>} />
     </Routes>,
     path,
@@ -49,5 +50,21 @@ describe('ProgramBuilderPage', () => {
     render()
     await user.click(screen.getByRole('button', { name: '+ Добавить день' }))
     expect(screen.getByLabelText('Название дня 2')).toBeInTheDocument()
+  })
+
+  it('редактирует существующую программу с предзаполнением', async () => {
+    authed()
+    const user = userEvent.setup()
+    render('/programs/1/edit')
+
+    // подтянулись имя и упражнение
+    expect(await screen.findByDisplayValue('Фул бади')).toBeInTheDocument()
+    expect(await screen.findByText('Присед в Смите')).toBeInTheDocument()
+
+    const nameInput = screen.getByLabelText('Название программы')
+    await user.clear(nameInput)
+    await user.type(nameInput, 'Фул бади v2')
+    await user.click(screen.getByRole('button', { name: 'Сохранить программу' }))
+    expect(await screen.findByText('Экран программы 700')).toBeInTheDocument()
   })
 })

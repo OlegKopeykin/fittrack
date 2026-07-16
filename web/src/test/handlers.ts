@@ -138,6 +138,30 @@ export const handlers = [
     )
   }),
 
+  http.put('/api/v1/programs/:id', async ({ params, request }) => {
+    const body = (await request.json()) as {
+      name: string
+      description?: string
+      days?: { name: string; exercises?: { exercise_id: number }[] }[]
+    }
+    return HttpResponse.json({
+      id: Number(params.id),
+      name: body.name,
+      description: body.description ?? '',
+      days: (body.days ?? []).map((d, i) => ({
+        id: 7000 + i,
+        position: i,
+        name: d.name,
+        exercises: (d.exercises ?? []).map((e, j) => ({
+          id: 70000 + i * 100 + j,
+          exercise_id: e.exercise_id,
+          position: j,
+          sets: 0,
+        })),
+      })),
+    })
+  }),
+
   http.get('/api/v1/programs/1', () =>
     HttpResponse.json({
       id: 1,

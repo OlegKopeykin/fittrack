@@ -28,6 +28,7 @@ export default function AppRoutes() {
         <Route path="/workouts" element={<WorkoutHistoryPage />} />
         <Route path="/workout/:id" element={<WorkoutDetailPage />} />
         <Route path="/programs/new" element={<ProgramBuilderPage />} />
+        <Route path="/programs/:id/edit" element={<ProgramBuilderPage />} />
         <Route path="/program/:id" element={<ProgramDetailPage />} />
         <Route path="/exercises" element={<ExercisesPage />} />
         <Route path="/progress" element={<ProgressPage />} />

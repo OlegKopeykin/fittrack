@@ -22,9 +22,19 @@ export default function ProgramDetailPage() {
       <PageHeader
         title={program.data?.name ?? 'Программа'}
         right={
-          <Link to="/" className="text-sm text-slate-400">
-            ‹ Назад
-          </Link>
+          <div className="flex items-center gap-2">
+            {program.data && (
+              <Link
+                to={`/programs/${pid}/edit`}
+                className="rounded-lg border border-slate-700 px-3 py-1.5 text-sm font-semibold text-slate-300"
+              >
+                Редактировать
+              </Link>
+            )}
+            <Link to="/" className="text-sm text-slate-400">
+              ‹ Назад
+            </Link>
+          </div>
         }
       />
       <div className="mx-auto max-w-3xl px-5 py-4">

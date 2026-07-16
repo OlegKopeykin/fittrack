@@ -1,6 +1,11 @@
-import { useState } from 'react'
-import { Link, useNavigate } from 'react-router-dom'
-import { useCreateProgram } from '../training/useTraining'
+import { useEffect, useRef, useState } from 'react'
+import { Link, useNavigate, useParams } from 'react-router-dom'
+import {
+  useCreateProgram,
+  useUpdateProgram,
+  useProgram,
+  useExerciseMap,
+} from '../training/useTraining'
 import { PageHeader } from '../components/AppShell'
 import ExercisePicker from '../training/ExercisePicker'
 
@@ -9,11 +14,38 @@ type BDay = { name: string; exercises: BExercise[] }
 
 export default function ProgramBuilderPage() {
   const navigate = useNavigate()
+  const { id } = useParams()
+  const editId = id ? Number(id) : undefined
+  const editing = editId !== undefined
+
   const create = useCreateProgram()
+  const update = useUpdateProgram(editId ?? 0)
+  const program = useProgram(editId ?? 0, editing)
+  const exMap = useExerciseMap()
+
   const [name, setName] = useState('')
   const [days, setDays] = useState<BDay[]>([{ name: 'День 1', exercises: [] }])
   const [pickingDay, setPickingDay] = useState<number | null>(null)
 
+  // Предзаполнение при правке — один раз, когда пришли программа и карта имён.
+  const seeded = useRef(false)
+  useEffect(() => {
+    if (editing && !seeded.current && program.data && exMap.data) {
+      setName(program.data.name)
+      setDays(
+        (program.data.days ?? []).map((d) => ({
+          name: d.name,
+          exercises: d.exercises.map((rx) => ({
+            id: rx.exercise_id,
+            name: exMap.data!.get(rx.exercise_id)?.name ?? `Упражнение #${rx.exercise_id}`,
+          })),
+        })),
+      )
+      seeded.current = true
+    }
+  }, [editing, program.data, exMap.data])
+
+  const pending = create.isPending || update.isPending
   const canSave = name.trim() !== '' && days.some((d) => d.exercises.length > 0)
 
   function updateDay(i: number, patch: Partial<BDay>) {
@@ -38,24 +70,24 @@ export default function ProgramBuilderPage() {
   }
 
   function save() {
-    create.mutate(
-      {
-        name: name.trim(),
-        days: days.map((d, i) => ({
-          name: d.name.trim() || `День ${i + 1}`,
-          exercises: d.exercises.map((e) => ({ exercise_id: e.id })),
-        })),
-      },
-      { onSuccess: (prog) => navigate(`/program/${prog.id}`) },
-    )
+    const payload = {
+      name: name.trim(),
+      days: days.map((d, i) => ({
+        name: d.name.trim() || `День ${i + 1}`,
+        exercises: d.exercises.map((e) => ({ exercise_id: e.id })),
+      })),
+    }
+    const done = { onSuccess: (prog: { id: number }) => navigate(`/program/${prog.id}`) }
+    if (editing) update.mutate(payload, done)
+    else create.mutate(payload, done)
   }
 
   return (
     <>
       <PageHeader
-        title="Новая программа"
+        title={editing ? 'Редактировать программу' : 'Новая программа'}
         right={
-          <Link to="/" className="text-sm text-slate-400">
+          <Link to={editing ? `/program/${editId}` : '/'} className="text-sm text-slate-400">
             ‹ Назад
           </Link>
         }
@@ -142,13 +174,13 @@ export default function ProgramBuilderPage() {
 
         <button
           type="button"
-          disabled={!canSave || create.isPending}
+          disabled={!canSave || pending}
           onClick={save}
           className="mt-5 w-full rounded-2xl bg-indigo-500 px-4 py-3.5 text-[15px] font-extrabold text-white disabled:opacity-50"
         >
           Сохранить программу
         </button>
-        {create.isError && (
+        {(create.isError || update.isError) && (
           <p className="mt-2 text-sm text-rose-400">Не удалось сохранить. Проверьте поля.</p>
         )}
       </div>
