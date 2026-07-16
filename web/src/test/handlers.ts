@@ -111,6 +111,33 @@ export const handlers = [
     ]),
   ),
 
+  http.post('/api/v1/programs', async ({ request }) => {
+    const body = (await request.json()) as {
+      name: string
+      description?: string
+      days?: { name: string; exercises?: { exercise_id: number }[] }[]
+    }
+    return HttpResponse.json(
+      {
+        id: 700,
+        name: body.name,
+        description: body.description ?? '',
+        days: (body.days ?? []).map((d, i) => ({
+          id: 7000 + i,
+          position: i,
+          name: d.name,
+          exercises: (d.exercises ?? []).map((e, j) => ({
+            id: 70000 + i * 100 + j,
+            exercise_id: e.exercise_id,
+            position: j,
+            sets: 0,
+          })),
+        })),
+      },
+      { status: 201 },
+    )
+  }),
+
   http.get('/api/v1/programs/1', () =>
     HttpResponse.json({
       id: 1,

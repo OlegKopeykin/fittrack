@@ -57,6 +57,12 @@ export type Program = {
   days?: ProgramDay[]
 }
 
+export type NewProgram = {
+  name: string
+  description?: string
+  days: { name: string; exercises: { exercise_id: number }[] }[]
+}
+
 export type ProgramDayDetail = {
   id: number
   program_id: number
@@ -111,6 +117,7 @@ export const trainingApi = {
   programs: (archived = false) =>
     api.get<Program[]>(`/api/v1/programs${archived ? '?archived=1' : ''}`),
   program: (id: number) => api.get<Program>(`/api/v1/programs/${id}`),
+  createProgram: (body: NewProgram) => api.post<Program>('/api/v1/programs', body),
   programDay: (dayId: number) => api.get<ProgramDayDetail>(`/api/v1/program-days/${dayId}`),
   archiveProgram: (id: number) => api.post<void>(`/api/v1/programs/${id}/archive`),
   unarchiveProgram: (id: number) => api.post<void>(`/api/v1/programs/${id}/unarchive`),
