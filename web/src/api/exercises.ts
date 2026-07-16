@@ -17,6 +17,7 @@ export type Exercise = {
   kind: ExerciseKind
   per_arm: boolean
   technique_notes: string
+  equipment?: string
   global: boolean
   archived: boolean
   aliases?: string[]
@@ -25,6 +26,15 @@ export type Exercise = {
 export type ExerciseQuery = {
   q?: string
   muscleGroup?: string
+}
+
+export type NewExercise = {
+  name: string
+  muscle_group: string // slug
+  kind: ExerciseKind
+  per_arm: boolean
+  equipment?: string
+  technique_notes?: string
 }
 
 export const exercisesApi = {
@@ -37,6 +47,21 @@ export const exercisesApi = {
     return api.get<Exercise[]>(`/api/v1/exercises${suffix}`)
   },
   get: (id: number) => api.get<Exercise>(`/api/v1/exercises/${id}`),
+  create: (body: NewExercise) => api.post<Exercise>('/api/v1/exercises', body),
+  update: (id: number, body: NewExercise) => api.patch<Exercise>(`/api/v1/exercises/${id}`, body),
+}
+
+export const equipmentLabel: Record<string, string> = {
+  '': '—',
+  barbell: 'штанга',
+  dumbbell: 'гантели',
+  machine: 'тренажёр',
+  cable: 'блок',
+  bodyweight: 'свой вес',
+  band: 'резина',
+  kettlebell: 'гиря',
+  other: 'другое',
+  none: 'без снаряда',
 }
 
 export const kindLabel: Record<ExerciseKind, string> = {
