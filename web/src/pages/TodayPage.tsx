@@ -1,9 +1,11 @@
-import { Link } from 'react-router-dom'
-import { usePrograms } from '../training/useTraining'
+import { Link, useNavigate } from 'react-router-dom'
+import { usePrograms, useStartWorkout } from '../training/useTraining'
 import { PageHeader } from '../components/AppShell'
 
 export default function TodayPage() {
   const programs = usePrograms()
+  const start = useStartWorkout()
+  const navigate = useNavigate()
 
   return (
     <>
@@ -19,6 +21,20 @@ export default function TodayPage() {
         }
       />
       <div className="mx-auto max-w-3xl px-5 py-4">
+        <button
+          type="button"
+          disabled={start.isPending}
+          onClick={() =>
+            start.mutate(
+              {},
+              { onSuccess: (wk) => navigate(`/workout/${wk.id}`) },
+            )
+          }
+          className="mb-5 w-full rounded-2xl bg-indigo-500 px-4 py-3.5 text-[15px] font-extrabold text-white disabled:opacity-60"
+        >
+          Начать пустую тренировку
+        </button>
+
         <h2 className="mb-3 text-sm font-bold uppercase tracking-wide text-slate-500">Программы</h2>
         {programs.data?.length === 0 && <p className="text-sm text-slate-500">Программ пока нет.</p>}
         <div className="flex flex-col gap-2">

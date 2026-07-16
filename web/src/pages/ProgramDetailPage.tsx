@@ -1,5 +1,10 @@
 import { Link, useNavigate, useParams } from 'react-router-dom'
-import { useProgram, useExerciseMap, useArchiveProgram } from '../training/useTraining'
+import {
+  useProgram,
+  useExerciseMap,
+  useArchiveProgram,
+  useStartWorkout,
+} from '../training/useTraining'
 import { PageHeader } from '../components/AppShell'
 import { formatReps, formatWeightRange } from '../lib/format'
 
@@ -9,6 +14,7 @@ export default function ProgramDetailPage() {
   const program = useProgram(pid)
   const exMap = useExerciseMap()
   const archive = useArchiveProgram()
+  const start = useStartWorkout()
   const navigate = useNavigate()
 
   return (
@@ -30,7 +36,25 @@ export default function ProgramDetailPage() {
         <div className="flex flex-col gap-4">
           {program.data?.days?.map((day) => (
             <section key={day.id} className="rounded-2xl border border-slate-800 bg-slate-900 p-3">
-              <h2 className="mb-3 font-bold text-slate-100">{day.name}</h2>
+              <div className="mb-3 flex items-center justify-between gap-3">
+                <h2 className="font-bold text-slate-100">{day.name}</h2>
+                <button
+                  type="button"
+                  disabled={start.isPending}
+                  onClick={() =>
+                    start.mutate(
+                      {
+                        program_day_id: day.id,
+                        title: `${program.data?.name ?? ''} · ${day.name}`.trim(),
+                      },
+                      { onSuccess: (wk) => navigate(`/workout/${wk.id}`) },
+                    )
+                  }
+                  className="rounded-lg bg-indigo-500 px-3 py-1.5 text-sm font-bold text-white disabled:opacity-60"
+                >
+                  Начать
+                </button>
+              </div>
               <ul className="flex flex-col gap-2.5">
                 {day.exercises.map((rx) => {
                   const ex = exMap.data?.get(rx.exercise_id)
