@@ -5,6 +5,7 @@ import TodayPage from './pages/TodayPage'
 import WorkoutHistoryPage from './pages/WorkoutHistoryPage'
 import WorkoutDetailPage from './pages/WorkoutDetailPage'
 import ProgramDetailPage from './pages/ProgramDetailPage'
+import ProgramBuilderPage from './pages/ProgramBuilderPage'
 import ExercisesPage from './pages/ExercisesPage'
 import ProgressPage from './pages/ProgressPage'
 import ProfilePage from './pages/ProfilePage'
@@ -26,6 +27,7 @@ export default function AppRoutes() {
         <Route path="/" element={<TodayPage />} />
         <Route path="/workouts" element={<WorkoutHistoryPage />} />
         <Route path="/workout/:id" element={<WorkoutDetailPage />} />
+        <Route path="/programs/new" element={<ProgramBuilderPage />} />
         <Route path="/program/:id" element={<ProgramDetailPage />} />
         <Route path="/exercises" element={<ExercisesPage />} />
         <Route path="/progress" element={<ProgressPage />} />

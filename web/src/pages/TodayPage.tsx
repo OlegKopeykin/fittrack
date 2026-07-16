@@ -35,7 +35,12 @@ export default function TodayPage() {
           Начать пустую тренировку
         </button>
 
-        <h2 className="mb-3 text-sm font-bold uppercase tracking-wide text-slate-500">Программы</h2>
+        <div className="mb-3 flex items-center justify-between">
+          <h2 className="text-sm font-bold uppercase tracking-wide text-slate-500">Программы</h2>
+          <Link to="/programs/new" className="text-sm font-semibold text-indigo-300">
+            + Создать
+          </Link>
+        </div>
         {programs.data?.length === 0 && <p className="text-sm text-slate-500">Программ пока нет.</p>}
         <div className="flex flex-col gap-2">
           {programs.data?.map((p) => (

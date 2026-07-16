@@ -3,7 +3,7 @@ import {
   useQuery,
   useQueryClient,
 } from '@tanstack/react-query'
-import { trainingApi, type NewSet, type FinishWorkout } from '../api/training'
+import { trainingApi, type NewSet, type FinishWorkout, type NewProgram } from '../api/training'
 import { exercisesApi, type Exercise } from '../api/exercises'
 
 export function useWorkouts() {
@@ -42,6 +42,14 @@ export function useArchiveProgram() {
   return useMutation({
     mutationFn: (v: { id: number; archived: boolean }) =>
       v.archived ? trainingApi.archiveProgram(v.id) : trainingApi.unarchiveProgram(v.id),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ['programs'] }),
+  })
+}
+
+export function useCreateProgram() {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: (body: NewProgram) => trainingApi.createProgram(body),
     onSuccess: () => qc.invalidateQueries({ queryKey: ['programs'] }),
   })
 }
