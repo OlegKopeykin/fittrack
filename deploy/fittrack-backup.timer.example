@@ -1,0 +1,11 @@
+# Шаблон systemd-таймера. Установить как /etc/systemd/system/fittrack-backup.timer
+# Ежедневный снимок БД в 03:30; при пропуске (машина была выключена) — догоняет.
+[Unit]
+Description=Ежедневный снимок БД FitTrack
+
+[Timer]
+OnCalendar=*-*-* 03:30:00
+Persistent=true
+
+[Install]
+WantedBy=timers.target

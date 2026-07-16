@@ -40,3 +40,36 @@ systemctl enable --now fittrack-deploy.timer
 ```sh
 sudo -u fittrack /opt/fittrack/bin/fittrack admin create-invite --owner
 ```
+
+## Резервные копии и восстановление
+
+Ежесуточный онлайн-снимок БД (`fittrack-backup.timer` → `backup.sh`):
+консистентная копия через `VACUUM INTO`, gzip, хранятся последние 14 в
+`/var/lib/fittrack/backups/`. Нужен `sqlite3` в системе.
+
+```sh
+install deploy/backup.sh                        /opt/fittrack/bin/backup.sh
+install deploy/fittrack-backup.service.example  /etc/systemd/system/fittrack-backup.service
+install deploy/fittrack-backup.timer.example    /etc/systemd/system/fittrack-backup.timer
+systemctl daemon-reload && systemctl enable --now fittrack-backup.timer
+```
+
+Снять копию сейчас: `systemctl start fittrack-backup.service`.
+
+**Восстановление (regularно проверять этот прогон):**
+
+```sh
+systemctl stop fittrack
+cd /var/lib/fittrack
+rm -f fittrack.db fittrack.db-wal fittrack.db-shm
+gunzip -c backups/fittrack-<stamp>.db.gz > fittrack.db
+chown fittrack:fittrack fittrack.db
+systemctl start fittrack
+curl -fsS http://127.0.0.1:8080/healthz
+```
+
+Снимки лежат на том же диске — это защита от повреждения БД, ошибочного
+удаления и неудачной миграции, но **не** от потери диска или хоста. Для
+устойчивости за пределами хоста задайте `FITTRACK_BACKUP_HOOK` (команда
+получает путь к `.db.gz` — например, выгрузка в объектное хранилище) или
+разверните потоковую репликацию (Litestream).

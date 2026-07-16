@@ -1,0 +1,17 @@
+# Шаблон systemd-юнита. Установить как /etc/systemd/system/fittrack-backup.service
+# Онлайновый снимок SQLite. Запускается по таймеру fittrack-backup.timer.
+[Unit]
+Description=FitTrack SQLite backup
+After=fittrack.service
+
+[Service]
+Type=oneshot
+User=fittrack
+Group=fittrack
+Environment=FITTRACK_DB=/var/lib/fittrack/fittrack.db
+Environment=FITTRACK_BACKUP_DIR=/var/lib/fittrack/backups
+Environment=FITTRACK_BACKUP_KEEP=14
+# Необязательно: команда выгрузки снимка за пределы хоста (получает путь к .db.gz).
+# Environment=FITTRACK_BACKUP_HOOK=/opt/fittrack/bin/backup-offsite.sh
+ExecStart=/opt/fittrack/bin/backup.sh
+ReadWritePaths=/var/lib/fittrack
