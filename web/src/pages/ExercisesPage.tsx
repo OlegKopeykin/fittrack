@@ -1,4 +1,5 @@
 import { useMemo, useState } from 'react'
+import { Link } from 'react-router-dom'
 import { useExercises, useMuscleGroups } from '../exercises/useExercises'
 import { kindLabel, type MuscleGroup } from '../api/exercises'
 import { PageHeader } from '../components/AppShell'
@@ -26,7 +27,14 @@ export default function ExercisesPage() {
 
   return (
     <>
-      <PageHeader title="Упражнения" />
+      <PageHeader
+        title="Упражнения"
+        right={
+          <Link to="/exercises/new" className="text-sm font-semibold text-indigo-300">
+            + Добавить
+          </Link>
+        }
+      />
 
       <div className="mx-auto max-w-3xl">
       <div className="sticky top-[60px] z-[4] bg-slate-950/90 px-5 pb-3 backdrop-blur">
@@ -79,13 +87,21 @@ export default function ExercisesPage() {
                 className="flex items-center gap-3 border-b border-slate-800/60 px-5 py-3"
               >
                 <span className={`size-2.5 flex-none rounded-full ${g?.color ?? 'bg-slate-600'}`} />
-                <div className="min-w-0">
+                <div className="min-w-0 flex-1">
                   <div className="font-medium text-slate-100">{ex.name}</div>
                   <div className="text-xs text-slate-500">
                     {g?.name_ru ?? '—'} · {kindLabel[ex.kind]}
                     {ex.per_arm ? ' · на руку' : ''}
                   </div>
                 </div>
+                {!ex.global && (
+                  <Link
+                    to={`/exercises/${ex.id}/edit`}
+                    className="flex-none text-sm font-semibold text-slate-400"
+                  >
+                    Изменить
+                  </Link>
+                )}
               </li>
             )
           })}

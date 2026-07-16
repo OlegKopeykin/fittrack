@@ -104,6 +104,42 @@ export const handlers = [
     return HttpResponse.json(list)
   }),
 
+  http.post('/api/v1/exercises', async ({ request }) => {
+    const b = (await request.json()) as Record<string, unknown>
+    return HttpResponse.json(
+      { id: 900, name: b.name, kind: b.kind, per_arm: b.per_arm, muscle_group_id: 2, global: false, archived: false },
+      { status: 201 },
+    )
+  }),
+
+  // Пользовательское упражнение для правки (global:false → форма редактируема).
+  http.get('/api/v1/exercises/:id', ({ params }) =>
+    HttpResponse.json({
+      id: Number(params.id),
+      name: 'Мой присед',
+      muscle_group_id: 2,
+      kind: 'compound',
+      per_arm: false,
+      technique_notes: 'спина прямая',
+      equipment: 'barbell',
+      global: false,
+      archived: false,
+    }),
+  ),
+
+  http.patch('/api/v1/exercises/:id', async ({ params, request }) => {
+    const b = (await request.json()) as Record<string, unknown>
+    return HttpResponse.json({
+      id: Number(params.id),
+      name: b.name,
+      kind: b.kind,
+      per_arm: b.per_arm,
+      muscle_group_id: 2,
+      global: false,
+      archived: false,
+    })
+  }),
+
   http.get('/api/v1/programs', () =>
     HttpResponse.json([
       { id: 1, name: 'Фул бади', description: 'A/B' },
