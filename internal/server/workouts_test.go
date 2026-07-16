@@ -319,3 +319,204 @@ func TestBearerCreatesWorkout(t *testing.T) {
 		t.Fatalf("bearer create workout: status = %d, want 201", resp.StatusCode)
 	}
 }
+
+// --- добор покрытия: удаление, валидация, bearer add-set, пагинация ---
+
+func deleteReq(t *testing.T, ts *testutil.TestServer, path string) *http.Response {
+	t.Helper()
+	req, err := http.NewRequest(http.MethodDelete, ts.URL+path, nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+	resp, err := ts.Client.Do(req)
+	if err != nil {
+		t.Fatal(err)
+	}
+	t.Cleanup(func() { resp.Body.Close() })
+	return resp
+}
+
+func TestDeleteSet(t *testing.T) {
+	ts := testutil.NewTestServer(t, nil)
+	ownerSession(t, ts)
+	wid := newWorkout(t, ts)
+	ex := anExerciseID(t, ts, "Присед")
+	resp := ts.PostJSON(t, "/api/v1/workouts/"+itoa(wid)+"/sets", map[string]any{
+		"exercise_id": ex, "role": "working", "weight_kg": 60, "reps": 8,
+	})
+	var st struct {
+		ID int64 `json:"id"`
+	}
+	testutil.DecodeJSON(t, resp, &st)
+
+	del := deleteReq(t, ts, "/api/v1/sets/"+itoa(st.ID))
+	if del.StatusCode != http.StatusNoContent {
+		t.Fatalf("delete set: status = %d, want 204", del.StatusCode)
+	}
+	var full struct {
+		Sets []map[string]any `json:"sets"`
+	}
+	testutil.DecodeJSON(t, ts.Get(t, "/api/v1/workouts/"+itoa(wid)), &full)
+	if len(full.Sets) != 0 {
+		t.Errorf("после удаления подходов = %d, want 0", len(full.Sets))
+	}
+}
+
+func TestDeleteWorkout(t *testing.T) {
+	ts := testutil.NewTestServer(t, nil)
+	ownerSession(t, ts)
+	wid := newWorkout(t, ts)
+
+	del := deleteReq(t, ts, "/api/v1/workouts/"+itoa(wid))
+	if del.StatusCode != http.StatusNoContent {
+		t.Fatalf("delete workout: status = %d, want 204", del.StatusCode)
+	}
+	if got := ts.Get(t, "/api/v1/workouts/"+itoa(wid)); got.StatusCode != http.StatusNotFound {
+		t.Errorf("после удаления GET: status = %d, want 404", got.StatusCode)
+	}
+}
+
+func TestSetMutationOwnership(t *testing.T) {
+	ts := testutil.NewTestServer(t, nil)
+	ownerSession(t, ts)
+	wid := newWorkout(t, ts)
+	ex := anExerciseID(t, ts, "Присед")
+	resp := ts.PostJSON(t, "/api/v1/workouts/"+itoa(wid)+"/sets", map[string]any{
+		"exercise_id": ex, "role": "working", "weight_kg": 60, "reps": 8,
+	})
+	var st struct {
+		ID int64 `json:"id"`
+	}
+	testutil.DecodeJSON(t, resp, &st)
+
+	// второй пользователь в отдельной сессии не видит чужой подход
+	jar, _ := cookiejar.New(nil)
+	other := &http.Client{Jar: jar}
+	code := ts.CreateInvite(t, "user", "")
+	reg, err := other.Post(ts.URL+"/api/v1/auth/register", "application/json",
+		mustJSON(map[string]string{"invite_code": code, "username": "chuzhoy", "password": "надёжный-пароль"}))
+	if err != nil {
+		t.Fatal(err)
+	}
+	reg.Body.Close()
+
+	req, _ := http.NewRequest(http.MethodPatch, ts.URL+"/api/v1/sets/"+itoa(st.ID), mustJSON(map[string]any{"role": "warmup"}))
+	req.Header.Set("Content-Type", "application/json")
+	patch, err := other.Do(req)
+	if err != nil {
+		t.Fatal(err)
+	}
+	patch.Body.Close()
+	if patch.StatusCode != http.StatusNotFound {
+		t.Errorf("чужой PATCH подхода: status = %d, want 404", patch.StatusCode)
+	}
+
+	dreq, _ := http.NewRequest(http.MethodDelete, ts.URL+"/api/v1/sets/"+itoa(st.ID), nil)
+	dresp, err := other.Do(dreq)
+	if err != nil {
+		t.Fatal(err)
+	}
+	dresp.Body.Close()
+	if dresp.StatusCode != http.StatusNotFound {
+		t.Errorf("чужой DELETE подхода: status = %d, want 404", dresp.StatusCode)
+	}
+}
+
+func TestAddSetValidation(t *testing.T) {
+	ts := testutil.NewTestServer(t, nil)
+	ownerSession(t, ts)
+	wid := newWorkout(t, ts)
+	ex := anExerciseID(t, ts, "Присед")
+
+	// нет exercise_id → 400
+	noEx := ts.PostJSON(t, "/api/v1/workouts/"+itoa(wid)+"/sets", map[string]any{"role": "working", "reps": 8})
+	if noEx.StatusCode != http.StatusBadRequest {
+		t.Errorf("без exercise_id: status = %d, want 400", noEx.StatusCode)
+	}
+	// неверный role → 400
+	badRole := ts.PostJSON(t, "/api/v1/workouts/"+itoa(wid)+"/sets", map[string]any{"exercise_id": ex, "role": "bogus", "reps": 8})
+	if badRole.StatusCode != http.StatusBadRequest {
+		t.Errorf("неверный role: status = %d, want 400", badRole.StatusCode)
+	}
+}
+
+func TestBearerAddsSet(t *testing.T) {
+	ts := testutil.NewTestServer(t, nil)
+	ownerSession(t, ts)
+	ex := anExerciseID(t, ts, "Присед")
+	token := issueToken(t, ts, "sync")
+
+	resp := bearer(t, ts, http.MethodPost, "/api/v1/workouts", token, map[string]any{"date": "2026-07-01"})
+	if resp.StatusCode != http.StatusCreated {
+		t.Fatalf("bearer create workout: status = %d, want 201", resp.StatusCode)
+	}
+	var wk struct {
+		ID int64 `json:"id"`
+	}
+	testutil.DecodeJSON(t, resp, &wk)
+
+	add := bearer(t, ts, http.MethodPost, "/api/v1/workouts/"+itoa(wk.ID)+"/sets", token,
+		map[string]any{"exercise_id": ex, "role": "working", "weight_kg": 70, "reps": 6})
+	if add.StatusCode != http.StatusCreated {
+		t.Fatalf("bearer add set: status = %d, want 201", add.StatusCode)
+	}
+	var full struct {
+		Sets []map[string]any `json:"sets"`
+	}
+	testutil.DecodeJSON(t, bearer(t, ts, http.MethodGet, "/api/v1/workouts/"+itoa(wk.ID), token, nil), &full)
+	if len(full.Sets) != 1 {
+		t.Errorf("подходов по bearer = %d, want 1", len(full.Sets))
+	}
+}
+
+func TestWorkoutListPagination(t *testing.T) {
+	ts := testutil.NewTestServer(t, nil)
+	ownerSession(t, ts)
+
+	dates := []string{"2026-06-01", "2026-06-02", "2026-06-03"}
+	for _, d := range dates {
+		resp := ts.PostJSON(t, "/api/v1/workouts", map[string]any{"date": d})
+		if resp.StatusCode != http.StatusCreated {
+			t.Fatalf("create %s: status = %d", d, resp.StatusCode)
+		}
+	}
+
+	type page struct {
+		Items []struct {
+			Date string `json:"date"`
+		} `json:"items"`
+		NextCursor string `json:"next_cursor"`
+	}
+	var p1 page
+	testutil.DecodeJSON(t, ts.Get(t, "/api/v1/workouts?limit=2"), &p1)
+	if len(p1.Items) != 2 {
+		t.Fatalf("страница 1: items = %d, want 2", len(p1.Items))
+	}
+	if p1.NextCursor == "" {
+		t.Fatal("страница 1: пустой next_cursor при остатке")
+	}
+
+	var p2 page
+	testutil.DecodeJSON(t, ts.Get(t, "/api/v1/workouts?limit=2&cursor="+p1.NextCursor), &p2)
+	if len(p2.Items) != 1 {
+		t.Fatalf("страница 2: items = %d, want 1", len(p2.Items))
+	}
+	if p2.NextCursor != "" {
+		t.Errorf("страница 2: next_cursor = %q, want пусто (данные кончились)", p2.NextCursor)
+	}
+	// нет пересечения дат между страницами
+	seen := map[string]bool{}
+	for _, it := range p1.Items {
+		seen[it.Date] = true
+	}
+	for _, it := range p2.Items {
+		if seen[it.Date] {
+			t.Errorf("дата %s встречается на обеих страницах", it.Date)
+		}
+	}
+
+	// битый курсор → 400
+	if bad := ts.Get(t, "/api/v1/workouts?cursor=not-a-cursor"); bad.StatusCode != http.StatusBadRequest {
+		t.Errorf("битый курсор: status = %d, want 400", bad.StatusCode)
+	}
+}
