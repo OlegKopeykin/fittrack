@@ -283,8 +283,15 @@ type setInput struct {
 	Reps        *int     `json:"reps"`
 	DistanceKm  *float64 `json:"distance_km"`
 	DurationSec *int     `json:"duration_sec"`
-	Note        string   `json:"note"`
+	Note        *string  `json:"note"`
 	ClientID    string   `json:"client_id"`
+}
+
+func derefStr(s *string) string {
+	if s == nil {
+		return ""
+	}
+	return *s
 }
 
 var validRoles = map[string]bool{"warmup": true, "ramp": true, "working": true}
@@ -334,7 +341,7 @@ func (s *server) handleAddSet(w http.ResponseWriter, r *http.Request) {
 		Reps:        intToNull(in.Reps),
 		DistanceM:   kmToMeters(in.DistanceKm),
 		DurationSec: intToNull(in.DurationSec),
-		Note:        in.Note,
+		Note:        derefStr(in.Note),
 		ClientID:    sql.NullString{String: in.ClientID, Valid: in.ClientID != ""},
 	})
 	if err != nil {
@@ -376,19 +383,34 @@ func (s *server) handleUpdateSet(w http.ResponseWriter, r *http.Request) {
 	if !decodeJSON(w, r, &in) {
 		return
 	}
-	role := st.Role
+	// Частичное обновление: непереданные поля сохраняют прежнее значение.
+	params := gen.UpdateSetParams{
+		Role: st.Role, WeightG: st.WeightG, Reps: st.Reps,
+		DistanceM: st.DistanceM, DurationSec: st.DurationSec, Note: st.Note, ID: st.ID,
+	}
 	if in.Role != "" {
 		if !validRoles[in.Role] {
 			writeError(w, http.StatusBadRequest, "invalid_input", map[string]string{"role": "warmup|ramp|working"})
 			return
 		}
-		role = in.Role
+		params.Role = in.Role
 	}
-	upd, err := s.q.UpdateSet(r.Context(), gen.UpdateSetParams{
-		Role: role, WeightG: kgToGrams(in.WeightKg), Reps: intToNull(in.Reps),
-		DistanceM: kmToMeters(in.DistanceKm), DurationSec: intToNull(in.DurationSec),
-		Note: in.Note, ID: st.ID,
-	})
+	if in.WeightKg != nil {
+		params.WeightG = kgToGrams(in.WeightKg)
+	}
+	if in.Reps != nil {
+		params.Reps = intToNull(in.Reps)
+	}
+	if in.DistanceKm != nil {
+		params.DistanceM = kmToMeters(in.DistanceKm)
+	}
+	if in.DurationSec != nil {
+		params.DurationSec = intToNull(in.DurationSec)
+	}
+	if in.Note != nil {
+		params.Note = *in.Note
+	}
+	upd, err := s.q.UpdateSet(r.Context(), params)
 	if err != nil {
 		writeError(w, http.StatusInternalServerError, "internal", nil)
 		return
