@@ -87,6 +87,59 @@ func TestWorkoutCreateGetList(t *testing.T) {
 	}
 }
 
+func TestWorkoutProgramDayLink(t *testing.T) {
+	ts := testutil.NewTestServer(t, nil)
+	ownerSession(t, ts)
+	dayID := aProgramDayID(t, ts)
+
+	// старт «дня программы» связывает тренировку с днём
+	resp := ts.PostJSON(t, "/api/v1/workouts", map[string]any{"program_day_id": dayID, "title": "Фул бади A"})
+	if resp.StatusCode != http.StatusCreated {
+		t.Fatalf("create: status = %d, want 201", resp.StatusCode)
+	}
+	var wk struct {
+		ProgramDayID *int64 `json:"program_day_id"`
+	}
+	testutil.DecodeJSON(t, resp, &wk)
+	if wk.ProgramDayID == nil || *wk.ProgramDayID != dayID {
+		t.Errorf("program_day_id = %v, want %d", wk.ProgramDayID, dayID)
+	}
+
+	// несуществующий день → 400
+	bad := ts.PostJSON(t, "/api/v1/workouts", map[string]any{"program_day_id": int64(999999)})
+	if bad.StatusCode != http.StatusBadRequest {
+		t.Errorf("несуществующий день: status = %d, want 400", bad.StatusCode)
+	}
+
+	// чужой день нельзя привязать и нельзя прочитать
+	jar, _ := cookiejar.New(nil)
+	other := &http.Client{Jar: jar}
+	code := ts.CreateInvite(t, "user", "")
+	reg, err := other.Post(ts.URL+"/api/v1/auth/register", "application/json",
+		mustJSON(map[string]string{"invite_code": code, "username": "sosed", "password": "надёжный-пароль"}))
+	if err != nil {
+		t.Fatal(err)
+	}
+	reg.Body.Close()
+
+	cr, err := other.Post(ts.URL+"/api/v1/workouts", "application/json", mustJSON(map[string]any{"program_day_id": dayID}))
+	if err != nil {
+		t.Fatal(err)
+	}
+	cr.Body.Close()
+	if cr.StatusCode != http.StatusBadRequest {
+		t.Errorf("чужой день при создании: status = %d, want 400", cr.StatusCode)
+	}
+	rd, err := other.Get(ts.URL + "/api/v1/program-days/" + itoa(dayID))
+	if err != nil {
+		t.Fatal(err)
+	}
+	rd.Body.Close()
+	if rd.StatusCode != http.StatusNotFound {
+		t.Errorf("чужой день при чтении: status = %d, want 404", rd.StatusCode)
+	}
+}
+
 func TestWorkoutTitleRoundtrip(t *testing.T) {
 	ts := testutil.NewTestServer(t, nil)
 	ownerSession(t, ts)

@@ -88,6 +88,7 @@ type workoutDTO struct {
 	ID           int64    `json:"id"`
 	Date         string   `json:"date"`
 	Title        string   `json:"title,omitempty"`
+	ProgramDayID *int64   `json:"program_day_id,omitempty"`
 	StartedAt    string   `json:"started_at,omitempty"`
 	FinishedAt   string   `json:"finished_at,omitempty"`
 	BodyweightKg *float64 `json:"bodyweight_kg,omitempty"`
@@ -96,9 +97,17 @@ type workoutDTO struct {
 	Sets         []setDTO `json:"sets,omitempty"`
 }
 
+func nullToInt64(v sql.NullInt64) *int64 {
+	if !v.Valid {
+		return nil
+	}
+	return &v.Int64
+}
+
 func toWorkoutDTO(w gen.Workout) workoutDTO {
 	return workoutDTO{
-		ID: w.ID, Date: w.Date, Title: w.Title, StartedAt: w.StartedAt.String, FinishedAt: w.FinishedAt.String,
+		ID: w.ID, Date: w.Date, Title: w.Title, ProgramDayID: nullToInt64(w.ProgramDayID),
+		StartedAt: w.StartedAt.String, FinishedAt: w.FinishedAt.String,
 		BodyweightKg: gramsToKg(w.BodyweightG), Feeling: w.Feeling, Notes: w.Notes,
 	}
 }
@@ -107,9 +116,10 @@ func toWorkoutDTO(w gen.Workout) workoutDTO {
 
 func (s *server) handleCreateWorkout(w http.ResponseWriter, r *http.Request) {
 	var in struct {
-		Date      string `json:"date"`
-		Title     string `json:"title"`
-		StartedAt string `json:"started_at"`
+		Date         string `json:"date"`
+		Title        string `json:"title"`
+		ProgramDayID *int64 `json:"program_day_id"`
+		StartedAt    string `json:"started_at"`
 	}
 	if r.ContentLength > 0 && !decodeJSON(w, r, &in) {
 		return
@@ -122,15 +132,26 @@ func (s *server) handleCreateWorkout(w http.ResponseWriter, r *http.Request) {
 	if in.StartedAt != "" {
 		started = sql.NullString{String: in.StartedAt, Valid: true}
 	}
+	var programDay sql.NullInt64
+	if in.ProgramDayID != nil {
+		// Проверяем, что день принадлежит пользователю, иначе не связываем.
+		if d, err := s.q.GetProgramDay(r.Context(), *in.ProgramDayID); err == nil && d.OwnerID == s.currentUserID(r) {
+			programDay = sql.NullInt64{Int64: *in.ProgramDayID, Valid: true}
+		} else {
+			writeError(w, http.StatusBadRequest, "invalid_input", map[string]string{"program_day_id": "день не найден"})
+			return
+		}
+	}
 	wk, err := s.q.CreateWorkout(r.Context(), gen.CreateWorkoutParams{
-		UserID:    s.currentUserID(r),
-		Date:      in.Date,
-		Title:     in.Title,
-		StartedAt: started,
-		Feeling:   "",
-		Notes:     "",
-		CreatedAt: now.Format(time.RFC3339),
-		UpdatedAt: now.Format(time.RFC3339),
+		UserID:       s.currentUserID(r),
+		Date:         in.Date,
+		Title:        in.Title,
+		ProgramDayID: programDay,
+		StartedAt:    started,
+		Feeling:      "",
+		Notes:        "",
+		CreatedAt:    now.Format(time.RFC3339),
+		UpdatedAt:    now.Format(time.RFC3339),
 	})
 	if err != nil {
 		writeError(w, http.StatusInternalServerError, "internal", nil)

@@ -1,6 +1,6 @@
 -- name: CreateWorkout :one
-INSERT INTO workouts (user_id, date, title, started_at, bodyweight_g, feeling, notes, created_at, updated_at)
-VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+INSERT INTO workouts (user_id, date, title, program_day_id, started_at, bodyweight_g, feeling, notes, created_at, updated_at)
+VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
 RETURNING *;
 
 -- name: GetWorkout :one
