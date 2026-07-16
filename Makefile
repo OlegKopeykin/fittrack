@@ -2,7 +2,7 @@ GO      ?= go
 NPM     ?= npm
 BINARY  ?= bin/fittrack
 
-.PHONY: deps test test-web build-web build e2e vet clean
+.PHONY: deps test test-web build-web build build-e2e e2e vet clean
 
 # Первый шаг после клона: JS-зависимости и браузеры Playwright.
 deps:
@@ -22,7 +22,11 @@ build-web:
 build: build-web
 	$(GO) build -tags embedweb -o $(BINARY) ./cmd/fittrack
 
-e2e: build
+# Бинарь с e2e-фикстурами (тег e2eseed) — только для Playwright, не для поставки.
+build-e2e: build-web
+	$(GO) build -tags "embedweb e2eseed" -o $(BINARY) ./cmd/fittrack
+
+e2e: build-e2e
 	cd e2e && npx playwright test
 
 clean:

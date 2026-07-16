@@ -1,3 +1,5 @@
+//go:build e2eseed
+
 package main
 
 import (
@@ -5,11 +7,24 @@ import (
 	"database/sql"
 	"errors"
 	"log/slog"
+	"os"
 	"time"
 
 	"github.com/OlegKopeykin/fittrack/internal/auth"
 	"github.com/OlegKopeykin/fittrack/internal/db/gen"
 )
+
+// maybeSeedE2E запускает e2e-фикстуры при FITTRACK_E2E_SEED=1. Присутствует
+// только в сборке с тегом e2eseed — в релизном бинаре этого кода нет.
+func maybeSeedE2E(conn *sql.DB) {
+	if os.Getenv("FITTRACK_E2E_SEED") != "1" {
+		return
+	}
+	if err := seedE2E(conn); err != nil {
+		slog.Error("e2e seed", "err", err)
+		os.Exit(1)
+	}
+}
 
 // Детерминированные фикстуры для Playwright (FITTRACK_E2E_SEED=1):
 // owner-инвайт с фиксированным кодом + готовый пользователь для входа.
