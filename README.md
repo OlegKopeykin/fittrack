@@ -1,17 +1,19 @@
 # FitTrack
 
-Селф-хостед трекер тренировок: дневник, каталог упражнений, программы с
-прогрессией, графики прогресса. Один статический бинарь: Go-бэкенд + встроенная
-React-SPA + SQLite.
+Селф-хостед трекер тренировок: дневник, каталог упражнений с историей подходов,
+программы (дни и предписания), прогресс веса тела. Один статический бинарь:
+Go-бэкенд + встроенная React-SPA + SQLite.
 
 ## Стек
 
 - **Backend**: Go, chi, sqlc, goose (миграции embedded), SQLite
-  (`modernc.org/sqlite`, без CGO), cookie-сессии (scs), argon2id.
+  (`modernc.org/sqlite`, без CGO), cookie-сессии (scs) + персональные
+  Bearer-токены, argon2id.
 - **Frontend**: React 19 + TypeScript + Vite, TanStack Query, React Router,
-  Tailwind CSS v4, Recharts. Mobile-first PWA.
-- **API**: `/api/v1` — JSON; для интеграций — персональные Bearer-токены
-  (контракт: `api/openapi.yaml`).
+  Tailwind CSS v4. Mobile-first; графики — самописный SVG-компонент, без внешних
+  библиотек.
+- **API**: `/api/v1` — JSON; cookie-сессии для веб-клиента и персональные
+  Bearer-токены для интеграций (см. «Машинный API»).
 
 ## Разработка
 
@@ -44,8 +46,8 @@ make build   # web/dist + bin/fittrack
 CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -tags embedweb -o fittrack ./cmd/fittrack
 ```
 
-CI на каждый push в `main` собирает такой же бинарь и публикует его в GitHub
-Release — его можно скачать вместо локальной сборки.
+CI собирает такой же бинарь на каждый push; на тег версии `vX.Y.Z` он
+публикуется в GitHub Release — оттуда его можно скачать вместо локальной сборки.
 
 ### 2. Подготовить сервер
 
@@ -87,7 +89,21 @@ sudo -u fittrack FITTRACK_DB=/var/lib/fittrack/fittrack.db \
 Откройте `https://ваш-домен/register?code=<код>` и заведите аккаунт. Сброс
 пароля — `fittrack admin reset-password <логин>`.
 
-### 5. Автообновление (опционально)
+### 5. Машинный API (опционально)
+
+Помимо cookie-сессий веб-клиента, к `/api/v1` можно ходить с персональным
+Bearer-токеном (заголовок `Authorization: Bearer <token>`). Токен выпускается
+подкомандой (печатается один раз, в БД хранится только хэш):
+
+```sh
+sudo -u fittrack FITTRACK_DB=/var/lib/fittrack/fittrack.db \
+  /opt/fittrack/bin/fittrack admin token --user <логин> --name <метка> [--days N]
+```
+
+`--days 0` (по умолчанию) — бессрочный. Отзыв — удалением строки из таблицы
+`api_tokens`.
+
+### 6. Автообновление (опционально)
 
 В `deploy/` есть systemd-таймер, который периодически забирает свежий бинарь из
 GitHub Release и обновляет сервис (проверка контрольной суммы, атомарная замена,
