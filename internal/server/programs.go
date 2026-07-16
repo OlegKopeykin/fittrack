@@ -1,6 +1,7 @@
 package server
 
 import (
+	"context"
 	"database/sql"
 	"errors"
 	"net/http"
@@ -140,25 +141,36 @@ func (s *server) createProgram(r *http.Request, uid int64, in programInput) (int
 		return 0, http.StatusInternalServerError, "internal", nil
 	}
 
-	for di, d := range in.Days {
+	if status, code, fields := s.insertDays(ctx, qtx, prog.ID, in.Days, idByName); status != 0 {
+		return 0, status, code, fields
+	}
+	if err := tx.Commit(); err != nil {
+		return 0, http.StatusInternalServerError, "internal", nil
+	}
+	return prog.ID, http.StatusCreated, "", nil
+}
+
+// insertDays вставляет дни и предписания программы. status 0 — успех.
+func (s *server) insertDays(ctx context.Context, qtx *gen.Queries, progID int64, days []programDayInput, idByName map[string]int64) (int, string, map[string]string) {
+	for di, d := range days {
 		day, err := qtx.CreateProgramDay(ctx, gen.CreateProgramDayParams{
-			ProgramID: prog.ID, Position: int64(di), Name: d.Name, Notes: d.Notes,
+			ProgramID: progID, Position: int64(di), Name: d.Name, Notes: d.Notes,
 		})
 		if err != nil {
-			return 0, http.StatusInternalServerError, "internal", nil
+			return http.StatusInternalServerError, "internal", nil
 		}
 		for pi, p := range d.Exercises {
 			exID := p.ExerciseID
 			if exID == 0 && p.ExerciseName != "" {
 				id, ok := idByName[strings.TrimSpace(p.ExerciseName)]
 				if !ok {
-					return 0, http.StatusBadRequest, "invalid_input",
+					return http.StatusBadRequest, "invalid_input",
 						map[string]string{"exercise": "неизвестное упражнение: " + p.ExerciseName}
 				}
 				exID = id
 			}
 			if exID == 0 {
-				return 0, http.StatusBadRequest, "invalid_input",
+				return http.StatusBadRequest, "invalid_input",
 					map[string]string{"exercise": "нужен exercise_id или exercise_name"}
 			}
 			if _, err := qtx.CreatePrescription(ctx, gen.CreatePrescriptionParams{
@@ -167,14 +179,86 @@ func (s *server) createProgram(r *http.Request, uid int64, in programInput) (int
 				WeightMinG: kgToGrams(p.WeightMinKg), WeightMaxG: kgToGrams(p.WeightMaxKg),
 				RestSec: intToNull(p.RestSec), Tempo: p.Tempo, Notes: p.Notes,
 			}); err != nil {
-				return 0, http.StatusInternalServerError, "internal", nil
+				return http.StatusInternalServerError, "internal", nil
 			}
 		}
 	}
-	if err := tx.Commit(); err != nil {
-		return 0, http.StatusInternalServerError, "internal", nil
+	return 0, "", nil
+}
+
+func (s *server) handleUpdateProgram(w http.ResponseWriter, r *http.Request) {
+	id, err := strconv.ParseInt(chi.URLParam(r, "id"), 10, 64)
+	if err != nil {
+		writeError(w, http.StatusNotFound, "not_found", nil)
+		return
 	}
-	return prog.ID, http.StatusCreated, "", nil
+	var in programInput
+	if !decodeJSON(w, r, &in) {
+		return
+	}
+	if strings.TrimSpace(in.Name) == "" {
+		writeError(w, http.StatusBadRequest, "invalid_input", map[string]string{"name": "обязательно"})
+		return
+	}
+
+	// Ответ пишем после закрытия транзакции (см. createProgram).
+	status, code, fields := s.updateProgram(r, s.currentUserID(r), id, in)
+	if status != http.StatusOK {
+		writeError(w, status, code, fields)
+		return
+	}
+	prog, err := s.q.GetProgram(r.Context(), id)
+	if err != nil {
+		writeError(w, http.StatusInternalServerError, "internal", nil)
+		return
+	}
+	dto, err := s.loadProgram(r, prog)
+	if err != nil {
+		writeError(w, http.StatusInternalServerError, "internal", nil)
+		return
+	}
+	writeJSON(w, http.StatusOK, dto)
+}
+
+// updateProgram заменяет содержимое программы (имя, дни, предписания) целиком
+// в одной транзакции. Возвращает статус; ответ пишет вызывающий после tx.
+func (s *server) updateProgram(r *http.Request, uid, progID int64, in programInput) (int, string, map[string]string) {
+	ctx := r.Context()
+	all, err := s.q.ListExercisesForUser(ctx, nullInt(uid))
+	if err != nil {
+		return http.StatusInternalServerError, "internal", nil
+	}
+	idByName := make(map[string]int64, len(all))
+	for _, e := range all {
+		idByName[e.Name] = e.ID
+	}
+
+	tx, err := s.opts.DB.BeginTx(ctx, nil)
+	if err != nil {
+		return http.StatusInternalServerError, "internal", nil
+	}
+	defer func() { _ = tx.Rollback() }()
+	qtx := s.q.WithTx(tx)
+
+	rows, err := qtx.UpdateProgram(ctx, gen.UpdateProgramParams{
+		Name: strings.TrimSpace(in.Name), Description: in.Description, ID: progID, UserID: uid,
+	})
+	if err != nil {
+		return http.StatusInternalServerError, "internal", nil
+	}
+	if rows == 0 {
+		return http.StatusNotFound, "not_found", nil
+	}
+	if err := qtx.DeleteProgramDays(ctx, progID); err != nil {
+		return http.StatusInternalServerError, "internal", nil
+	}
+	if status, code, fields := s.insertDays(ctx, qtx, progID, in.Days, idByName); status != 0 {
+		return status, code, fields
+	}
+	if err := tx.Commit(); err != nil {
+		return http.StatusInternalServerError, "internal", nil
+	}
+	return http.StatusOK, "", nil
 }
 
 func (s *server) loadProgram(r *http.Request, prog gen.Program) (programDTO, error) {

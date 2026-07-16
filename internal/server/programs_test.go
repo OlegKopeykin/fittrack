@@ -2,10 +2,26 @@ package server_test
 
 import (
 	"net/http"
+	"net/http/cookiejar"
 	"testing"
 
 	"github.com/OlegKopeykin/fittrack/internal/testutil"
 )
+
+func putJSON(t *testing.T, ts *testutil.TestServer, path string, body any) *http.Response {
+	t.Helper()
+	req, err := http.NewRequest(http.MethodPut, ts.URL+path, mustJSON(body))
+	if err != nil {
+		t.Fatal(err)
+	}
+	req.Header.Set("Content-Type", "application/json")
+	resp, err := ts.Client.Do(req)
+	if err != nil {
+		t.Fatal(err)
+	}
+	t.Cleanup(func() { resp.Body.Close() })
+	return resp
+}
 
 func TestCreateAndGetProgram(t *testing.T) {
 	ts := testutil.NewTestServer(t, nil)
@@ -116,6 +132,84 @@ func TestGetProgramDay(t *testing.T) {
 
 	if miss := ts.Get(t, "/api/v1/program-days/999999"); miss.StatusCode != http.StatusNotFound {
 		t.Errorf("несуществующий день: status = %d, want 404", miss.StatusCode)
+	}
+}
+
+func TestUpdateProgramReplacesContent(t *testing.T) {
+	ts := testutil.NewTestServer(t, nil)
+	ownerSession(t, ts)
+
+	// создаём программу с одним днём
+	resp := ts.PostJSON(t, "/api/v1/programs", map[string]any{
+		"name": "Черновик",
+		"days": []map[string]any{{"name": "День 1", "exercises": []map[string]any{
+			{"exercise_name": "Присед в Смите"},
+		}}},
+	})
+	if resp.StatusCode != http.StatusCreated {
+		t.Fatalf("create: status = %d", resp.StatusCode)
+	}
+	var prog struct {
+		ID int64 `json:"id"`
+	}
+	testutil.DecodeJSON(t, resp, &prog)
+
+	// PUT: новое имя и два дня
+	upd := putJSON(t, ts, "/api/v1/programs/"+itoa(prog.ID), map[string]any{
+		"name": "Фул бади",
+		"days": []map[string]any{
+			{"name": "День A", "exercises": []map[string]any{{"exercise_name": "Присед в Смите"}}},
+			{"name": "День B", "exercises": []map[string]any{{"exercise_name": "Жим гантелей лёжа"}}},
+		},
+	})
+	if upd.StatusCode != http.StatusOK {
+		t.Fatalf("update: status = %d, want 200", upd.StatusCode)
+	}
+
+	var got struct {
+		Name string `json:"name"`
+		Days []struct {
+			Name      string           `json:"name"`
+			Exercises []map[string]any `json:"exercises"`
+		} `json:"days"`
+	}
+	testutil.DecodeJSON(t, ts.Get(t, "/api/v1/programs/"+itoa(prog.ID)), &got)
+	if got.Name != "Фул бади" || len(got.Days) != 2 {
+		t.Fatalf("после PUT = %+v, want «Фул бади»/2 дня", got)
+	}
+	if got.Days[1].Name != "День B" || len(got.Days[1].Exercises) != 1 {
+		t.Errorf("второй день = %+v", got.Days[1])
+	}
+}
+
+func TestUpdateProgramOwnership(t *testing.T) {
+	ts := testutil.NewTestServer(t, nil)
+	ownerSession(t, ts)
+	resp := ts.PostJSON(t, "/api/v1/programs", map[string]any{
+		"name": "Моя", "days": []map[string]any{{"name": "Д", "exercises": []map[string]any{{"exercise_name": "Присед в Смите"}}}},
+	})
+	var prog struct {
+		ID int64 `json:"id"`
+	}
+	testutil.DecodeJSON(t, resp, &prog)
+
+	jar, _ := cookiejar.New(nil)
+	other := &http.Client{Jar: jar}
+	code := ts.CreateInvite(t, "user", "")
+	reg, _ := other.Post(ts.URL+"/api/v1/auth/register", "application/json",
+		mustJSON(map[string]string{"invite_code": code, "username": "chuzhak", "password": "надёжный-пароль"}))
+	reg.Body.Close()
+
+	req, _ := http.NewRequest(http.MethodPut, ts.URL+"/api/v1/programs/"+itoa(prog.ID),
+		mustJSON(map[string]any{"name": "Взлом", "days": []map[string]any{}}))
+	req.Header.Set("Content-Type", "application/json")
+	r, err := other.Do(req)
+	if err != nil {
+		t.Fatal(err)
+	}
+	r.Body.Close()
+	if r.StatusCode != http.StatusNotFound {
+		t.Errorf("чужой PUT: status = %d, want 404", r.StatusCode)
 	}
 }
 

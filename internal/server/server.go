@@ -102,6 +102,7 @@ func New(opts Options) http.Handler {
 				priv.Get("/programs", s.handleListPrograms)
 				priv.Post("/programs", s.handleCreateProgram)
 				priv.Get("/programs/{id}", s.handleGetProgram)
+				priv.Put("/programs/{id}", s.handleUpdateProgram)
 				priv.Delete("/programs/{id}", s.handleDeleteProgram)
 				priv.Post("/programs/{id}/archive", s.handleArchiveProgram)
 				priv.Post("/programs/{id}/unarchive", s.handleUnarchiveProgram)
