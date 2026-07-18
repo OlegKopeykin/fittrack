@@ -10,6 +10,7 @@ import {
   useUpdateSet,
   useDeleteSet,
   useFinishWorkout,
+  useDeleteWorkout,
 } from './useTraining'
 import { PageHeader } from '../components/AppShell'
 import { formatSet } from '../lib/format'
@@ -47,6 +48,7 @@ export default function WorkoutLogger({ workout }: { workout: Workout }) {
   const programDay = useProgramDay(workout.program_day_id ?? undefined)
   const exMap = useExerciseMap()
   const finish = useFinishWorkout(workout.id)
+  const del = useDeleteWorkout()
   const [extra, setExtra] = useState<number[]>([])
   const [picking, setPicking] = useState(false)
   const [finishing, setFinishing] = useState(false)
@@ -144,6 +146,18 @@ export default function WorkoutLogger({ workout }: { workout: Workout }) {
             + Добавить упражнение
           </button>
         )}
+
+        <button
+          type="button"
+          onClick={() => {
+            if (window.confirm('Удалить тренировку? Действие необратимо.')) {
+              del.mutate(workout.id, { onSuccess: () => navigate('/workouts') })
+            }
+          }}
+          className="mt-6 w-full rounded-xl border border-rose-500/30 px-4 py-2.5 text-sm font-semibold text-rose-300"
+        >
+          Удалить тренировку
+        </button>
       </div>
 
       {finishing && (

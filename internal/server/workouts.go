@@ -132,18 +132,29 @@ func (s *server) handleCreateWorkout(w http.ResponseWriter, r *http.Request) {
 	if in.StartedAt != "" {
 		started = sql.NullString{String: in.StartedAt, Valid: true}
 	}
+	uid := s.currentUserID(r)
 	var programDay sql.NullInt64
 	if in.ProgramDayID != nil {
 		// Проверяем, что день принадлежит пользователю, иначе не связываем.
-		if d, err := s.q.GetProgramDay(r.Context(), *in.ProgramDayID); err == nil && d.OwnerID == s.currentUserID(r) {
+		if d, err := s.q.GetProgramDay(r.Context(), *in.ProgramDayID); err == nil && d.OwnerID == uid {
 			programDay = sql.NullInt64{Int64: *in.ProgramDayID, Valid: true}
 		} else {
 			writeError(w, http.StatusBadRequest, "invalid_input", map[string]string{"program_day_id": "день не найден"})
 			return
 		}
 	}
+	// Повторный «Начать» того же дня за тот же день переиспользует уже начатую
+	// (незавершённую) тренировку — чтобы не плодить пустые дубли.
+	if programDay.Valid {
+		if existing, err := s.q.GetUnfinishedWorkoutForDay(r.Context(), gen.GetUnfinishedWorkoutForDayParams{
+			UserID: uid, ProgramDayID: programDay, Date: in.Date,
+		}); err == nil {
+			writeJSON(w, http.StatusOK, toWorkoutDTO(existing))
+			return
+		}
+	}
 	wk, err := s.q.CreateWorkout(r.Context(), gen.CreateWorkoutParams{
-		UserID:       s.currentUserID(r),
+		UserID:       uid,
 		Date:         in.Date,
 		Title:        in.Title,
 		ProgramDayID: programDay,

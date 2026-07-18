@@ -31,6 +31,15 @@ test('логирование: старт дня программы, запись
   await expect(page.getByText('Демо-программа · День 1').first()).toBeVisible()
 })
 
+test('логгер: удаление тренировки уводит в историю', async ({ page }) => {
+  await login(page)
+  page.on('dialog', (d) => d.accept())
+  await page.getByRole('button', { name: 'Начать пустую тренировку' }).click()
+  await expect(page.getByText(/Пустая тренировка/)).toBeVisible()
+  await page.getByRole('button', { name: 'Удалить тренировку' }).click()
+  await expect(page.getByRole('heading', { name: 'История' })).toBeVisible()
+})
+
 test('пустая тренировка: быстрый старт и добавление упражнения', async ({ page }) => {
   await login(page)
   await page.getByRole('button', { name: 'Начать пустую тренировку' }).click()

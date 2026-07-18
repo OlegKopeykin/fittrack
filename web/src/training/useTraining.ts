@@ -119,6 +119,14 @@ export function useDeleteSet(workoutId: number) {
   })
 }
 
+export function useDeleteWorkout() {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: (id: number) => trainingApi.deleteWorkout(id),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ['workouts'] }),
+  })
+}
+
 export function useFinishWorkout(workoutId: number) {
   const qc = useQueryClient()
   return useMutation({

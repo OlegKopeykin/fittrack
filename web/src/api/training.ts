@@ -107,6 +107,7 @@ export const trainingApi = {
     api.post<Workout>('/api/v1/workouts', body),
   finishWorkout: (id: number, body: FinishWorkout) =>
     api.patch<Workout>(`/api/v1/workouts/${id}`, body),
+  deleteWorkout: (id: number) => api.del<void>(`/api/v1/workouts/${id}`),
   addSet: (workoutId: number, body: NewSet) =>
     api.post<WorkoutSet>(`/api/v1/workouts/${workoutId}/sets`, body),
   updateSet: (setId: number, body: Partial<NewSet>) =>
