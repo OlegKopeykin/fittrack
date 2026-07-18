@@ -3,6 +3,7 @@ import { useLogout, useMe } from '../auth/useAuth'
 import { PageHeader } from '../components/AppShell'
 import TelegramExport from '../profile/TelegramExport'
 import BackupRestore from '../profile/BackupRestore'
+import InviteFriend from '../profile/InviteFriend'
 
 export default function ProfilePage() {
   const { data: user } = useMe()
@@ -30,6 +31,8 @@ export default function ProfilePage() {
             {user?.role === 'owner' ? 'Владелец' : 'Пользователь'}
           </div>
         </div>
+
+        {user?.role === 'owner' && <InviteFriend />}
 
         <TelegramExport />
 
