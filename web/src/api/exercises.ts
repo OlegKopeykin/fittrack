@@ -64,6 +64,26 @@ export const equipmentLabel: Record<string, string> = {
   none: 'без снаряда',
 }
 
+// Грубая категория оборудования для фильтра каталога.
+export type ExType = 'machine' | 'free' | 'bodyweight' | 'cardio' | 'other'
+
+export function exerciseType(ex: { equipment?: string; kind: ExerciseKind }): ExType {
+  if (ex.kind === 'cardio') return 'cardio'
+  const eq = ex.equipment ?? ''
+  if (eq === 'machine' || eq === 'cable') return 'machine'
+  if (eq === 'barbell' || eq === 'dumbbell' || eq === 'kettlebell') return 'free'
+  if (eq === 'bodyweight' || ex.kind === 'bodyweight') return 'bodyweight'
+  return 'other'
+}
+
+export const exTypeLabel: Record<ExType, string> = {
+  machine: 'тренажёр',
+  free: 'свободные',
+  bodyweight: 'свой вес',
+  cardio: 'кардио',
+  other: '',
+}
+
 export const kindLabel: Record<ExerciseKind, string> = {
   compound: 'базовое',
   isolation: 'изолирующее',

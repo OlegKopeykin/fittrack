@@ -162,9 +162,9 @@ export const handlers = [
     const q = (url.searchParams.get('q') ?? '').toLowerCase()
     const group = url.searchParams.get('muscle_group') ?? ''
     let list = [
-      { id: 10, name: 'Присед в Смите', muscle_group_id: 2, kind: 'compound', per_arm: false, technique_notes: '', global: true, archived: false, aliases: ['high-bar'] },
-      { id: 11, name: 'Жим гантелей лёжа', muscle_group_id: 1, kind: 'compound', per_arm: true, technique_notes: '', global: true, archived: false },
-      { id: 12, name: 'Тяга верхнего блока', muscle_group_id: 3, kind: 'compound', per_arm: false, technique_notes: '', global: true, archived: false, aliases: ['подтягивания'] },
+      { id: 10, name: 'Присед в Смите', muscle_group_id: 2, kind: 'compound', per_arm: false, equipment: 'machine', technique_notes: '', global: true, archived: false, aliases: ['high-bar'] },
+      { id: 11, name: 'Жим гантелей лёжа', muscle_group_id: 1, kind: 'compound', per_arm: true, equipment: 'dumbbell', technique_notes: '', global: true, archived: false },
+      { id: 12, name: 'Тяга верхнего блока', muscle_group_id: 3, kind: 'compound', per_arm: false, equipment: 'cable', technique_notes: '', global: true, archived: false, aliases: ['подтягивания'] },
     ]
     if (group === 'chest') list = list.filter((e) => e.muscle_group_id === 1)
     if (q === 'подтягивания') list = list.filter((e) => e.id === 12)

@@ -51,6 +51,9 @@ DELETE FROM exercise_images WHERE exercise_id = ?;
 -- name: HasExerciseImage :one
 SELECT EXISTS(SELECT 1 FROM exercise_images WHERE exercise_id = ?);
 
+-- name: SetGlobalExerciseEquipment :exec
+UPDATE exercises SET equipment = ? WHERE name = ? AND owner_id IS NULL;
+
 -- name: ArchiveExercise :execrows
 UPDATE exercises SET archived_at = ? WHERE id = ?;
 
