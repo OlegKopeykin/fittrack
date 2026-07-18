@@ -1,6 +1,7 @@
 import { useNavigate } from 'react-router-dom'
 import { useLogout, useMe } from '../auth/useAuth'
 import { PageHeader } from '../components/AppShell'
+import TelegramExport from '../profile/TelegramExport'
 
 export default function ProfilePage() {
   const { data: user } = useMe()
@@ -17,6 +18,9 @@ export default function ProfilePage() {
             {user?.role === 'owner' ? 'Владелец' : 'Пользователь'}
           </div>
         </div>
+
+        <TelegramExport />
+
         <button
           type="button"
           onClick={() => logout.mutate(undefined, { onSuccess: () => navigate('/login') })}

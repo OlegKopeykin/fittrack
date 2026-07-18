@@ -34,9 +34,36 @@ function seedWorkouts() {
 }
 seedWorkouts()
 
+// Мок настроек Telegram-экспорта.
+type TgState = {
+  configured: boolean
+  bot_username: string
+  chat_linked: boolean
+  enabled: boolean
+  frequency: string
+  last_sent_at: string
+}
+export const mockTelegram: TgState = {
+  configured: false,
+  bot_username: '',
+  chat_linked: false,
+  enabled: false,
+  frequency: 'daily',
+  last_sent_at: '',
+}
+function resetTelegram() {
+  mockTelegram.configured = false
+  mockTelegram.bot_username = ''
+  mockTelegram.chat_linked = false
+  mockTelegram.enabled = false
+  mockTelegram.frequency = 'daily'
+  mockTelegram.last_sent_at = ''
+}
+
 export function resetMock() {
   mockState.me = null
   seedWorkouts()
+  resetTelegram()
 }
 
 function errorBody(code: string, message: string, fields?: Record<string, string>) {
@@ -78,6 +105,35 @@ export const handlers = [
 
   http.post('/api/v1/auth/logout', () => {
     mockState.me = null
+    return new HttpResponse(null, { status: 204 })
+  }),
+
+  http.get('/api/v1/profile/telegram', () => HttpResponse.json({ ...mockTelegram })),
+
+  http.put('/api/v1/profile/telegram', async ({ request }) => {
+    const b = (await request.json()) as { bot_token?: string; frequency?: string; enabled?: boolean }
+    if (b.bot_token !== undefined) {
+      mockTelegram.configured = true
+      mockTelegram.bot_username = 'fittrack_test_bot'
+      mockTelegram.chat_linked = false
+    }
+    if (b.frequency !== undefined) mockTelegram.frequency = b.frequency
+    if (b.enabled !== undefined) mockTelegram.enabled = b.enabled
+    return HttpResponse.json({ ...mockTelegram })
+  }),
+
+  http.post('/api/v1/profile/telegram/link', () => {
+    if (!mockTelegram.configured) {
+      return HttpResponse.json(errorBody('invalid_input', 'нет токена'), { status: 400 })
+    }
+    mockTelegram.chat_linked = true
+    return HttpResponse.json({ ...mockTelegram })
+  }),
+
+  http.post('/api/v1/profile/telegram/test', () => new HttpResponse(null, { status: 204 })),
+
+  http.delete('/api/v1/profile/telegram', () => {
+    resetTelegram()
     return new HttpResponse(null, { status: 204 })
   }),
 

@@ -57,6 +57,7 @@ func main() {
 			PublicOrigin:  cfg.PublicOrigin,
 			SecureCookies: cfg.SecureCookies,
 			Version:       appVersion,
+			Telegram:      e2eTelegram(),
 		}),
 		ReadHeaderTimeout: 5 * time.Second,
 	}
