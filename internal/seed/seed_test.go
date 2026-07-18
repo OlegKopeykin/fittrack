@@ -69,6 +69,21 @@ func TestLoadCatalogIsIdempotent(t *testing.T) {
 	if byName["Молотки с гантелями"] != "dumbbell" {
 		t.Errorf("оборудование «Молотки с гантелями» = %q, want dumbbell", byName["Молотки с гантелями"])
 	}
+
+	// у «Жим ногами» должна встать иллюстрация (из catalog.json image)
+	var legPressID int64
+	for _, e := range list {
+		if e.Name == "Жим ногами" {
+			legPressID = e.ID
+		}
+	}
+	has, err := q.HasExerciseImage(ctx, legPressID)
+	if err != nil {
+		t.Fatalf("HasExerciseImage: %v", err)
+	}
+	if !has {
+		t.Error("у «Жим ногами» нет картинки после сида")
+	}
 }
 
 func TestCatalogAliasesSearchable(t *testing.T) {

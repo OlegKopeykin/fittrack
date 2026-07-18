@@ -4,7 +4,7 @@ package seed
 import (
 	"context"
 	"database/sql"
-	_ "embed"
+	"embed"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -16,6 +16,11 @@ import (
 
 //go:embed catalog.json
 var catalogJSON []byte
+
+// Иллюстрации упражнений (public domain, free-exercise-db).
+//
+//go:embed images/*.jpg
+var imagesFS embed.FS
 
 type catalog struct {
 	MuscleGroups []struct {
@@ -31,6 +36,7 @@ type catalog struct {
 		Kind        string   `json:"kind"`
 		PerArm      bool     `json:"per_arm"`
 		Equipment   string   `json:"equipment"`
+		Image       string   `json:"image"`
 	} `json:"exercises"`
 }
 
@@ -68,7 +74,9 @@ func LoadCatalog(ctx context.Context, conn *sql.DB) error {
 	}
 
 	for _, ex := range cat.Exercises {
+		var exID int64
 		if existing, err := q.GetGlobalExerciseByName(ctx, ex.Name); err == nil {
+			exID = existing.ID
 			// Уже есть — синхронизируем оборудование (бэкфилл на существующих).
 			if existing.Equipment != ex.Equipment {
 				if err := q.SetGlobalExerciseEquipment(ctx, gen.SetGlobalExerciseEquipmentParams{
@@ -77,34 +85,54 @@ func LoadCatalog(ctx context.Context, conn *sql.DB) error {
 					return fmt.Errorf("seed: equipment %q: %w", ex.Name, err)
 				}
 			}
-			continue
-		} else if !errors.Is(err, sql.ErrNoRows) {
+		} else if errors.Is(err, sql.ErrNoRows) {
+			gid, ok := groupID[ex.MuscleGroup]
+			if !ok {
+				return fmt.Errorf("seed: упражнение %q ссылается на неизвестную группу %q", ex.Name, ex.MuscleGroup)
+			}
+			created, err := q.CreateExercise(ctx, gen.CreateExerciseParams{
+				OwnerID:        sql.NullInt64{}, // глобальное
+				Name:           ex.Name,
+				MuscleGroupID:  gid,
+				Kind:           ex.Kind,
+				PerArm:         boolToInt(ex.PerArm),
+				Equipment:      ex.Equipment,
+				TechniqueNotes: "",
+				CreatedAt:      now,
+			})
+			if err != nil {
+				return fmt.Errorf("seed: упражнение %q: %w", ex.Name, err)
+			}
+			exID = created.ID
+			for _, alias := range ex.Aliases {
+				if _, err := q.AddAlias(ctx, gen.AddAliasParams{
+					ExerciseID: created.ID,
+					Alias:      alias,
+					AliasNorm:  exercises.Normalize(alias),
+				}); err != nil {
+					return fmt.Errorf("seed: алиас %q упражнения %q: %w", alias, ex.Name, err)
+				}
+			}
+		} else {
 			return err
 		}
-		gid, ok := groupID[ex.MuscleGroup]
-		if !ok {
-			return fmt.Errorf("seed: упражнение %q ссылается на неизвестную группу %q", ex.Name, ex.MuscleGroup)
-		}
-		created, err := q.CreateExercise(ctx, gen.CreateExerciseParams{
-			OwnerID:        sql.NullInt64{}, // глобальное
-			Name:           ex.Name,
-			MuscleGroupID:  gid,
-			Kind:           ex.Kind,
-			PerArm:         boolToInt(ex.PerArm),
-			Equipment:      ex.Equipment,
-			TechniqueNotes: "",
-			CreatedAt:      now,
-		})
-		if err != nil {
-			return fmt.Errorf("seed: упражнение %q: %w", ex.Name, err)
-		}
-		for _, alias := range ex.Aliases {
-			if _, err := q.AddAlias(ctx, gen.AddAliasParams{
-				ExerciseID: created.ID,
-				Alias:      alias,
-				AliasNorm:  exercises.Normalize(alias),
-			}); err != nil {
-				return fmt.Errorf("seed: алиас %q упражнения %q: %w", alias, ex.Name, err)
+
+		// Иллюстрация: ставим глобальному упражнению, если её ещё нет.
+		if ex.Image != "" {
+			has, err := q.HasExerciseImage(ctx, exID)
+			if err != nil {
+				return err
+			}
+			if !has {
+				data, err := imagesFS.ReadFile("images/" + ex.Image)
+				if err != nil {
+					return fmt.Errorf("seed: картинка %q: %w", ex.Image, err)
+				}
+				if err := q.SetExerciseImage(ctx, gen.SetExerciseImageParams{
+					ExerciseID: exID, ContentType: "image/jpeg", Bytes: data, UpdatedAt: now,
+				}); err != nil {
+					return fmt.Errorf("seed: установка картинки %q: %w", ex.Name, err)
+				}
 			}
 		}
 	}
