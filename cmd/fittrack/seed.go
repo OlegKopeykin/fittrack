@@ -12,7 +12,24 @@ import (
 
 	"github.com/OlegKopeykin/fittrack/internal/auth"
 	"github.com/OlegKopeykin/fittrack/internal/db/gen"
+	"github.com/OlegKopeykin/fittrack/internal/telegram"
 )
+
+// e2eTelegram — детерминированный фейк Bot API для Playwright: токен принимается,
+// чат «находится», отправка успешна. В релизной сборке — nil (реальный клиент).
+func e2eTelegram() telegram.Client { return fakeTelegram{} }
+
+type fakeTelegram struct{}
+
+func (fakeTelegram) GetMe(context.Context, string) (string, error) {
+	return "fittrack_e2e_bot", nil
+}
+func (fakeTelegram) ResolveChatID(context.Context, string) (string, error) {
+	return "42", nil
+}
+func (fakeTelegram) SendDocument(context.Context, string, string, string, []byte, string) error {
+	return nil
+}
 
 // maybeSeedE2E запускает e2e-фикстуры при FITTRACK_E2E_SEED=1. Присутствует
 // только в сборке с тегом e2eseed — в релизном бинаре этого кода нет.
