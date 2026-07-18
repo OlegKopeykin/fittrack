@@ -70,19 +70,19 @@ func TestLoadCatalogIsIdempotent(t *testing.T) {
 		t.Errorf("оборудование «Молотки с гантелями» = %q, want dumbbell", byName["Молотки с гантелями"])
 	}
 
-	// у «Жим ногами» должна встать иллюстрация (из catalog.json image)
-	var legPressID int64
+	// у «Жим гантелей лёжа» должна встать иллюстрация (из catalog.json image)
+	var benchID int64
 	for _, e := range list {
-		if e.Name == "Жим ногами" {
-			legPressID = e.ID
+		if e.Name == "Жим гантелей лёжа" {
+			benchID = e.ID
 		}
 	}
-	has, err := q.HasExerciseImage(ctx, legPressID)
+	has, err := q.HasExerciseImage(ctx, benchID)
 	if err != nil {
 		t.Fatalf("HasExerciseImage: %v", err)
 	}
 	if !has {
-		t.Error("у «Жим ногами» нет картинки после сида")
+		t.Error("у «Жим гантелей лёжа» нет картинки после сида")
 	}
 }
 
