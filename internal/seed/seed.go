@@ -30,6 +30,7 @@ type catalog struct {
 		MuscleGroup string   `json:"muscle_group"`
 		Kind        string   `json:"kind"`
 		PerArm      bool     `json:"per_arm"`
+		Equipment   string   `json:"equipment"`
 	} `json:"exercises"`
 }
 
@@ -67,8 +68,16 @@ func LoadCatalog(ctx context.Context, conn *sql.DB) error {
 	}
 
 	for _, ex := range cat.Exercises {
-		if _, err := q.GetGlobalExerciseByName(ctx, ex.Name); err == nil {
-			continue // уже есть
+		if existing, err := q.GetGlobalExerciseByName(ctx, ex.Name); err == nil {
+			// Уже есть — синхронизируем оборудование (бэкфилл на существующих).
+			if existing.Equipment != ex.Equipment {
+				if err := q.SetGlobalExerciseEquipment(ctx, gen.SetGlobalExerciseEquipmentParams{
+					Equipment: ex.Equipment, Name: ex.Name,
+				}); err != nil {
+					return fmt.Errorf("seed: equipment %q: %w", ex.Name, err)
+				}
+			}
+			continue
 		} else if !errors.Is(err, sql.ErrNoRows) {
 			return err
 		}
@@ -82,6 +91,7 @@ func LoadCatalog(ctx context.Context, conn *sql.DB) error {
 			MuscleGroupID:  gid,
 			Kind:           ex.Kind,
 			PerArm:         boolToInt(ex.PerArm),
+			Equipment:      ex.Equipment,
 			TechniqueNotes: "",
 			CreatedAt:      now,
 		})

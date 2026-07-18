@@ -8,6 +8,22 @@ async function login(page) {
   await expect(page.getByRole('heading', { name: 'Тренировка' })).toBeVisible()
 }
 
+test('каталог: фильтр по типу оборудования', async ({ page }) => {
+  await login(page)
+  await page.getByRole('link', { name: 'Упражнения' }).click()
+  await expect(page.getByText('Жим ногами')).toBeVisible()
+
+  // Тренажёр → «Жим ногами» есть, «Молотки с гантелями» (свободные) — нет
+  await page.getByRole('button', { name: 'Тренажёр' }).click()
+  await expect(page.getByText('Жим ногами')).toBeVisible()
+  await expect(page.getByText('Молотки с гантелями')).toHaveCount(0)
+
+  // Свободные веса → наоборот
+  await page.getByRole('button', { name: 'Свободные веса' }).click()
+  await expect(page.getByText('Молотки с гантелями')).toBeVisible()
+  await expect(page.getByText('Жим ногами')).toHaveCount(0)
+})
+
 test('каталог: добавить своё упражнение и отредактировать', async ({ page }) => {
   await login(page)
   await page.getByRole('link', { name: 'Упражнения' }).click()

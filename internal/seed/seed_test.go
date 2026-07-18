@@ -56,8 +56,18 @@ func TestLoadCatalogIsIdempotent(t *testing.T) {
 		t.Errorf("после повторного сида групп %d, want 16 (дублей быть не должно)", len(groups))
 	}
 	list, _ := q.ListExercisesForUser(ctx, testutil.NullInt(0))
-	if len(list) != 52 {
-		t.Errorf("после повторного сида упражнений %d, want 52", len(list))
+	if len(list) != 53 {
+		t.Errorf("после повторного сида упражнений %d, want 53", len(list))
+	}
+	byName := map[string]string{}
+	for _, e := range list {
+		byName[e.Name] = e.Equipment
+	}
+	if byName["Жим ногами"] != "machine" {
+		t.Errorf("оборудование «Жим ногами» = %q, want machine", byName["Жим ногами"])
+	}
+	if byName["Молотки с гантелями"] != "dumbbell" {
+		t.Errorf("оборудование «Молотки с гантелями» = %q, want dumbbell", byName["Молотки с гантелями"])
 	}
 }
 

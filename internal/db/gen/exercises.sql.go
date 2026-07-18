@@ -582,6 +582,20 @@ func (q *Queries) SetExerciseImage(ctx context.Context, arg SetExerciseImagePara
 	return err
 }
 
+const setGlobalExerciseEquipment = `-- name: SetGlobalExerciseEquipment :exec
+UPDATE exercises SET equipment = ? WHERE name = ? AND owner_id IS NULL
+`
+
+type SetGlobalExerciseEquipmentParams struct {
+	Equipment string
+	Name      string
+}
+
+func (q *Queries) SetGlobalExerciseEquipment(ctx context.Context, arg SetGlobalExerciseEquipmentParams) error {
+	_, err := q.db.ExecContext(ctx, setGlobalExerciseEquipment, arg.Equipment, arg.Name)
+	return err
+}
+
 const setSecondaryMuscle = `-- name: SetSecondaryMuscle :exec
 INSERT INTO exercise_secondary_muscles (exercise_id, muscle_group_id)
 VALUES (?, ?)
