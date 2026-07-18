@@ -15,6 +15,10 @@ import (
 	"github.com/OlegKopeykin/fittrack/web"
 )
 
+// appVersion — версия приложения, задаётся при сборке (-ldflags -X). Попадает
+// в экспорт лога.
+var appVersion = "dev"
+
 func main() {
 	cfg := config.FromEnv()
 
@@ -52,6 +56,7 @@ func main() {
 			Static:        static,
 			PublicOrigin:  cfg.PublicOrigin,
 			SecureCookies: cfg.SecureCookies,
+			Version:       appVersion,
 		}),
 		ReadHeaderTimeout: 5 * time.Second,
 	}

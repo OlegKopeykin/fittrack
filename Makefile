@@ -1,6 +1,7 @@
 GO      ?= go
 NPM     ?= npm
 BINARY  ?= bin/fittrack
+LDFLAGS ?= -X main.appVersion=$(shell cat VERSION)
 
 .PHONY: deps test test-web build-web build build-e2e e2e vet clean
 
@@ -20,11 +21,11 @@ build-web:
 	cd web && $(NPM) run build
 
 build: build-web
-	$(GO) build -tags embedweb -o $(BINARY) ./cmd/fittrack
+	$(GO) build -tags embedweb -ldflags "$(LDFLAGS)" -o $(BINARY) ./cmd/fittrack
 
 # Бинарь с e2e-фикстурами (тег e2eseed) — только для Playwright, не для поставки.
 build-e2e: build-web
-	$(GO) build -tags "embedweb e2eseed" -o $(BINARY) ./cmd/fittrack
+	$(GO) build -tags "embedweb e2eseed" -ldflags "$(LDFLAGS)" -o $(BINARY) ./cmd/fittrack
 
 e2e: build-e2e
 	cd e2e && npx playwright test

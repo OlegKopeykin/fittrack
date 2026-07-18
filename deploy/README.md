@@ -73,3 +73,18 @@ curl -fsS http://127.0.0.1:8080/healthz
 устойчивости за пределами хоста задайте `FITTRACK_BACKUP_HOOK` (команда
 получает путь к `.db.gz` — например, выгрузка в объектное хранилище) или
 разверните потоковую репликацию (Litestream).
+
+## Экспорт лога в Telegram (опционально)
+
+Пользователи включают выгрузку своего лога в свой чат Telegram в профиле
+(указывают токен бота). Ночной таймер обходит включивших и шлёт бэкап тем,
+у кого подошёл срок по частоте (день/неделя/месяц). Нужен исходящий доступ
+хоста к `api.telegram.org`.
+
+```sh
+install deploy/fittrack-telegram.service.example  /etc/systemd/system/fittrack-telegram.service
+install deploy/fittrack-telegram.timer.example    /etc/systemd/system/fittrack-telegram.timer
+systemctl daemon-reload && systemctl enable --now fittrack-telegram.timer
+```
+
+Прогнать вручную: `sudo -u fittrack FITTRACK_DB=/var/lib/fittrack/fittrack.db /opt/fittrack/bin/fittrack admin export-telegram`.

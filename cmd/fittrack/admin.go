@@ -6,14 +6,17 @@ import (
 	"database/sql"
 	"flag"
 	"fmt"
+	"log/slog"
 	"os"
 	"strings"
 	"time"
 
 	"github.com/OlegKopeykin/fittrack/internal/auth"
+	"github.com/OlegKopeykin/fittrack/internal/backup"
 	"github.com/OlegKopeykin/fittrack/internal/config"
 	"github.com/OlegKopeykin/fittrack/internal/db"
 	"github.com/OlegKopeykin/fittrack/internal/db/gen"
+	"github.com/OlegKopeykin/fittrack/internal/telegram"
 )
 
 // runAdmin — сервисные подкоманды на боксе:
@@ -135,7 +138,55 @@ func runAdmin(cfg config.Config, args []string) error {
 		fmt.Println("пароль обновлён")
 		return nil
 
+	case "export-telegram":
+		return runExportTelegram(ctx, q)
+
 	default:
 		return fmt.Errorf("неизвестная подкоманда %q", args[0])
 	}
+}
+
+// runExportTelegram обходит пользователей с включённым экспортом и шлёт бэкап
+// тем, у кого подошёл срок по частоте. Запускается ночным таймером.
+func runExportTelegram(ctx context.Context, q *gen.Queries) error {
+	settings, err := q.ListEnabledTelegram(ctx)
+	if err != nil {
+		return err
+	}
+	now := time.Now().UTC()
+	tg := telegram.New()
+	sent, skipped := 0, 0
+	for _, st := range settings {
+		if !backup.IsDue(st.Frequency, st.LastSentAt, now) {
+			skipped++
+			continue
+		}
+		user, err := q.GetUserByID(ctx, st.UserID)
+		if err != nil {
+			slog.Error("export-telegram: пользователь", "user_id", st.UserID, "err", err)
+			continue
+		}
+		nowStr := now.Format(time.RFC3339)
+		exp, err := backup.Build(ctx, q, st.UserID, user.Username, appVersion, nowStr)
+		if err != nil {
+			slog.Error("export-telegram: сборка", "user", user.Username, "err", err)
+			continue
+		}
+		data, err := backup.Marshal(exp)
+		if err != nil {
+			slog.Error("export-telegram: json", "user", user.Username, "err", err)
+			continue
+		}
+		filename := "fittrack-" + user.Username + "-" + nowStr[:10] + ".json"
+		if err := tg.SendDocument(ctx, st.BotToken, st.ChatID, filename, data, ""); err != nil {
+			slog.Error("export-telegram: отправка", "user", user.Username, "err", err)
+			continue
+		}
+		if err := q.TouchTelegramSent(ctx, gen.TouchTelegramSentParams{LastSentAt: nowStr, UserID: st.UserID}); err != nil {
+			slog.Error("export-telegram: touch", "user", user.Username, "err", err)
+		}
+		sent++
+	}
+	slog.Info("export-telegram завершён", "sent", sent, "skipped", skipped)
+	return nil
 }
