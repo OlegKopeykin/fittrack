@@ -123,6 +123,7 @@ func New(opts Options) http.Handler {
 				priv.Post("/profile/telegram/test", s.handleTestTelegram)
 				priv.Delete("/profile/telegram", s.handleDeleteTelegram)
 				priv.Get("/profile/export", s.handleExportDownload)
+				priv.Post("/profile/import", s.handleImport)
 
 				// Персональные API-токены (только из cookie-сессии).
 				priv.Get("/tokens", s.handleListTokens)
