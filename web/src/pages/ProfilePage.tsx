@@ -11,8 +11,19 @@ export default function ProfilePage() {
 
   return (
     <>
-      <PageHeader title="Профиль" />
-      <div className="px-5 py-6">
+      <PageHeader
+        title="Профиль"
+        right={
+          <button
+            type="button"
+            onClick={() => logout.mutate(undefined, { onSuccess: () => navigate('/login') })}
+            className="rounded-lg border border-slate-700 px-3 py-1.5 text-sm font-semibold text-slate-300"
+          >
+            Выйти
+          </button>
+        }
+      />
+      <div className="mx-auto max-w-3xl px-5 py-6">
         <div className="rounded-2xl border border-slate-800 bg-slate-900 p-4">
           <div className="text-lg font-bold">{user?.display_name || user?.username}</div>
           <div className="mt-1 text-sm text-slate-500">
@@ -23,14 +34,6 @@ export default function ProfilePage() {
         <TelegramExport />
 
         <BackupRestore />
-
-        <button
-          type="button"
-          onClick={() => logout.mutate(undefined, { onSuccess: () => navigate('/login') })}
-          className="mt-6 w-full rounded-xl border border-slate-700 px-4 py-3 text-sm font-semibold text-slate-300"
-        >
-          Выйти
-        </button>
       </div>
     </>
   )
