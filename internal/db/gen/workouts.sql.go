@@ -249,6 +249,39 @@ func (q *Queries) GetSetByClientID(ctx context.Context, clientID sql.NullString)
 	return i, err
 }
 
+const getUnfinishedWorkoutForDay = `-- name: GetUnfinishedWorkoutForDay :one
+SELECT id, user_id, date, started_at, finished_at, bodyweight_g, feeling, notes, created_at, updated_at, program_day_id, title FROM workouts
+WHERE user_id = ? AND program_day_id = ? AND date = ?
+  AND (finished_at IS NULL OR finished_at = '')
+ORDER BY id LIMIT 1
+`
+
+type GetUnfinishedWorkoutForDayParams struct {
+	UserID       int64
+	ProgramDayID sql.NullInt64
+	Date         string
+}
+
+func (q *Queries) GetUnfinishedWorkoutForDay(ctx context.Context, arg GetUnfinishedWorkoutForDayParams) (Workout, error) {
+	row := q.db.QueryRowContext(ctx, getUnfinishedWorkoutForDay, arg.UserID, arg.ProgramDayID, arg.Date)
+	var i Workout
+	err := row.Scan(
+		&i.ID,
+		&i.UserID,
+		&i.Date,
+		&i.StartedAt,
+		&i.FinishedAt,
+		&i.BodyweightG,
+		&i.Feeling,
+		&i.Notes,
+		&i.CreatedAt,
+		&i.UpdatedAt,
+		&i.ProgramDayID,
+		&i.Title,
+	)
+	return i, err
+}
+
 const getWorkout = `-- name: GetWorkout :one
 SELECT id, user_id, date, started_at, finished_at, bodyweight_g, feeling, notes, created_at, updated_at, program_day_id, title FROM workouts WHERE id = ?
 `

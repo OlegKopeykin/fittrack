@@ -87,6 +87,48 @@ func TestWorkoutCreateGetList(t *testing.T) {
 	}
 }
 
+func TestStartDayReusesUnfinished(t *testing.T) {
+	ts := testutil.NewTestServer(t, nil)
+	ownerSession(t, ts)
+	dayID := aProgramDayID(t, ts)
+
+	first := ts.PostJSON(t, "/api/v1/workouts", map[string]any{"program_day_id": dayID})
+	if first.StatusCode != http.StatusCreated {
+		t.Fatalf("first: status = %d, want 201", first.StatusCode)
+	}
+	var w1 struct {
+		ID int64 `json:"id"`
+	}
+	testutil.DecodeJSON(t, first, &w1)
+
+	// повторный «Начать» того же дня переиспользует незавершённую (200, тот же id)
+	second := ts.PostJSON(t, "/api/v1/workouts", map[string]any{"program_day_id": dayID})
+	if second.StatusCode != http.StatusOK {
+		t.Fatalf("second: status = %d, want 200 (переиспользование)", second.StatusCode)
+	}
+	var w2 struct {
+		ID int64 `json:"id"`
+	}
+	testutil.DecodeJSON(t, second, &w2)
+	if w1.ID != w2.ID {
+		t.Errorf("повтор создал новую тренировку (%d != %d)", w1.ID, w2.ID)
+	}
+
+	// после завершения первой следующий «Начать» создаёт новую
+	finish(t, ts, w1.ID, "2026-07-18T12:00:00Z")
+	third := ts.PostJSON(t, "/api/v1/workouts", map[string]any{"program_day_id": dayID})
+	if third.StatusCode != http.StatusCreated {
+		t.Fatalf("third: status = %d, want 201 (после завершения — новая)", third.StatusCode)
+	}
+	var w3 struct {
+		ID int64 `json:"id"`
+	}
+	testutil.DecodeJSON(t, third, &w3)
+	if w3.ID == w1.ID {
+		t.Errorf("после завершения переиспользовал завершённую")
+	}
+}
+
 func TestWorkoutProgramDayLink(t *testing.T) {
 	ts := testutil.NewTestServer(t, nil)
 	ownerSession(t, ts)

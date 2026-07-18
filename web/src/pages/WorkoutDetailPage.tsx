@@ -1,6 +1,6 @@
 import { useState } from 'react'
-import { Link, useParams } from 'react-router-dom'
-import { useWorkout, useExerciseMap } from '../training/useTraining'
+import { Link, useNavigate, useParams } from 'react-router-dom'
+import { useWorkout, useExerciseMap, useDeleteWorkout } from '../training/useTraining'
 import { PageHeader } from '../components/AppShell'
 import { formatDate, formatSet } from '../lib/format'
 import type { WorkoutSet } from '../api/training'
@@ -12,7 +12,15 @@ export default function WorkoutDetailPage() {
   const { id } = useParams()
   const workout = useWorkout(Number(id))
   const exMap = useExerciseMap()
+  const del = useDeleteWorkout()
+  const navigate = useNavigate()
   const [editing, setEditing] = useState(false)
+
+  function remove() {
+    if (!workout.data) return
+    if (!window.confirm('Удалить тренировку? Действие необратимо.')) return
+    del.mutate(workout.data.id, { onSuccess: () => navigate('/workouts') })
+  }
 
   // Активная (не завершённая) или явно открытая на правку — интерактивный логгер.
   if (workout.data && (!workout.data.finished_at || editing)) {
@@ -35,13 +43,22 @@ export default function WorkoutDetailPage() {
         right={
           <div className="flex items-center gap-2">
             {workout.data && (
-              <button
-                type="button"
-                onClick={() => setEditing(true)}
-                className="rounded-lg border border-slate-700 px-3 py-1.5 text-sm font-semibold text-slate-300"
-              >
-                Редактировать
-              </button>
+              <>
+                <button
+                  type="button"
+                  onClick={() => setEditing(true)}
+                  className="rounded-lg border border-slate-700 px-3 py-1.5 text-sm font-semibold text-slate-300"
+                >
+                  Редактировать
+                </button>
+                <button
+                  type="button"
+                  onClick={remove}
+                  className="rounded-lg border border-rose-500/40 px-3 py-1.5 text-sm font-semibold text-rose-300"
+                >
+                  Удалить
+                </button>
+              </>
             )}
             <Link to="/workouts" className="text-sm text-slate-400">
               ‹ Назад

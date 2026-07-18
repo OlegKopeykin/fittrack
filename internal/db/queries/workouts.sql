@@ -39,6 +39,12 @@ SELECT COALESCE(MAX(position), 0) + 1 FROM sets WHERE workout_id = ?;
 -- name: ListSetsForWorkout :many
 SELECT * FROM sets WHERE workout_id = ? ORDER BY position;
 
+-- name: GetUnfinishedWorkoutForDay :one
+SELECT * FROM workouts
+WHERE user_id = ? AND program_day_id = ? AND date = ?
+  AND (finished_at IS NULL OR finished_at = '')
+ORDER BY id LIMIT 1;
+
 -- name: UpdateSet :one
 UPDATE sets
 SET role = ?, weight_g = ?, reps = ?, distance_m = ?, duration_sec = ?, note = ?

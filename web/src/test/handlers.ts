@@ -324,6 +324,11 @@ export const handlers = [
     return HttpResponse.json(wk)
   }),
 
+  http.delete('/api/v1/workouts/:id', ({ params }) => {
+    mockWorkouts.delete(Number(params.id))
+    return new HttpResponse(null, { status: 204 })
+  }),
+
   http.post('/api/v1/workouts/:id/sets', async ({ params, request }) => {
     const wk = mockWorkouts.get(Number(params.id))
     if (!wk) return HttpResponse.json({ error: { code: 'not_found', message: 'нет' } }, { status: 404 })
