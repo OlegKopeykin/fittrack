@@ -132,6 +132,11 @@ export const handlers = [
 
   http.post('/api/v1/profile/telegram/test', () => new HttpResponse(null, { status: 204 })),
 
+  http.post('/api/v1/profile/import', async ({ request }) => {
+    const b = (await request.json()) as { workouts?: unknown[] }
+    return HttpResponse.json({ imported: b.workouts?.length ?? 0, skipped: 0 })
+  }),
+
   http.delete('/api/v1/profile/telegram', () => {
     resetTelegram()
     return new HttpResponse(null, { status: 204 })

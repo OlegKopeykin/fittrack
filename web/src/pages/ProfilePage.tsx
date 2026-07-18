@@ -2,6 +2,7 @@ import { useNavigate } from 'react-router-dom'
 import { useLogout, useMe } from '../auth/useAuth'
 import { PageHeader } from '../components/AppShell'
 import TelegramExport from '../profile/TelegramExport'
+import BackupRestore from '../profile/BackupRestore'
 
 export default function ProfilePage() {
   const { data: user } = useMe()
@@ -20,6 +21,8 @@ export default function ProfilePage() {
         </div>
 
         <TelegramExport />
+
+        <BackupRestore />
 
         <button
           type="button"

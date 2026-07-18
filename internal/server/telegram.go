@@ -196,6 +196,25 @@ func (s *server) handleExportDownload(w http.ResponseWriter, r *http.Request) {
 	_, _ = w.Write(data)
 }
 
+// handleImport восстанавливает лог из загруженного JSON-бэкапа.
+func (s *server) handleImport(w http.ResponseWriter, r *http.Request) {
+	var exp backup.Export
+	if !decodeJSON(w, r, &exp) {
+		return
+	}
+	if len(exp.Workouts) == 0 {
+		writeError(w, http.StatusBadRequest, "invalid_input", map[string]string{"file": "в файле нет тренировок"})
+		return
+	}
+	now := s.opts.Now().UTC().Format(time.RFC3339)
+	imported, skipped, err := backup.Restore(r.Context(), s.opts.DB, s.q, s.currentUserID(r), now, exp)
+	if err != nil {
+		writeError(w, http.StatusInternalServerError, "internal", nil)
+		return
+	}
+	writeJSON(w, http.StatusOK, map[string]int{"imported": imported, "skipped": skipped})
+}
+
 func buildBackupFile(r *http.Request, q *gen.Queries, uid int64, username, version, now string) ([]byte, string, error) {
 	exp, err := backup.Build(r.Context(), q, uid, username, version, now)
 	if err != nil {
