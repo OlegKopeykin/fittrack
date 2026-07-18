@@ -114,7 +114,8 @@
       "muscle_group": "adductors",
       "kind": "isolation",
       "per_arm": false,
-      "equipment": "machine"
+      "equipment": "machine",
+      "image": "Thigh_Adductor.jpg"
     },
     {
       "name": "Молотки с гантелями",
@@ -122,7 +123,8 @@
       "muscle_group": "biceps",
       "kind": "isolation",
       "per_arm": true,
-      "equipment": "dumbbell"
+      "equipment": "dumbbell",
+      "image": "Hammer_Curls.jpg"
     },
     {
       "name": "Сгибания в блоке",
@@ -133,7 +135,8 @@
       "muscle_group": "biceps",
       "kind": "isolation",
       "per_arm": false,
-      "equipment": "cable"
+      "equipment": "cable",
+      "image": "Standing_Biceps_Cable_Curl.jpg"
     },
     {
       "name": "Жим носками в платформе",
@@ -143,7 +146,8 @@
       "muscle_group": "calves",
       "kind": "isolation",
       "per_arm": false,
-      "equipment": "machine"
+      "equipment": "machine",
+      "image": "Calf_Press_On_The_Leg_Press_Machine.jpg"
     },
     {
       "name": "Икры стоя",
@@ -151,7 +155,8 @@
       "muscle_group": "calves",
       "kind": "isolation",
       "per_arm": false,
-      "equipment": "machine"
+      "equipment": "machine",
+      "image": "Standing_Dumbbell_Calf_Raise.jpg"
     },
     {
       "name": "Тибиалис у стены",
@@ -169,7 +174,8 @@
       "muscle_group": "cardio",
       "kind": "cardio",
       "per_arm": false,
-      "equipment": "machine"
+      "equipment": "machine",
+      "image": "Running_Treadmill.jpg"
     },
     {
       "name": "Велотренажёр",
@@ -177,7 +183,8 @@
       "muscle_group": "cardio",
       "kind": "cardio",
       "per_arm": false,
-      "equipment": "machine"
+      "equipment": "machine",
+      "image": "Bicycling_Stationary.jpg"
     },
     {
       "name": "Гребля",
@@ -185,7 +192,8 @@
       "muscle_group": "cardio",
       "kind": "cardio",
       "per_arm": false,
-      "equipment": "machine"
+      "equipment": "machine",
+      "image": "Rowing_Stationary.jpg"
     },
     {
       "name": "Эйрбайк",
@@ -193,7 +201,8 @@
       "muscle_group": "cardio",
       "kind": "cardio",
       "per_arm": false,
-      "equipment": "machine"
+      "equipment": "machine",
+      "image": "Air_Bike.jpg"
     },
     {
       "name": "Эллипсоид",
@@ -201,7 +210,8 @@
       "muscle_group": "cardio",
       "kind": "cardio",
       "per_arm": false,
-      "equipment": "machine"
+      "equipment": "machine",
+      "image": "Elliptical_Trainer.jpg"
     },
     {
       "name": "Бабочка",
@@ -209,7 +219,8 @@
       "muscle_group": "chest",
       "kind": "isolation",
       "per_arm": false,
-      "equipment": "machine"
+      "equipment": "machine",
+      "image": "Butterfly.jpg"
     },
     {
       "name": "Жим гантелей лёжа",
@@ -217,7 +228,8 @@
       "muscle_group": "chest",
       "kind": "compound",
       "per_arm": true,
-      "equipment": "dumbbell"
+      "equipment": "dumbbell",
+      "image": "Dumbbell_Bench_Press.jpg"
     },
     {
       "name": "Жим гантелей на наклонной 30°",
@@ -225,7 +237,8 @@
       "muscle_group": "chest",
       "kind": "compound",
       "per_arm": true,
-      "equipment": "dumbbell"
+      "equipment": "dumbbell",
+      "image": "Incline_Dumbbell_Press.jpg"
     },
     {
       "name": "Жим лёжа в Смите",
@@ -233,7 +246,8 @@
       "muscle_group": "chest",
       "kind": "compound",
       "per_arm": false,
-      "equipment": "machine"
+      "equipment": "machine",
+      "image": "Smith_Machine_Bench_Press.jpg"
     },
     {
       "name": "Отжимания от пола",
@@ -243,7 +257,8 @@
       "muscle_group": "chest",
       "kind": "bodyweight",
       "per_arm": false,
-      "equipment": "bodyweight"
+      "equipment": "bodyweight",
+      "image": "Pushups.jpg"
     },
     {
       "name": "Дровосек в блоке",
@@ -251,7 +266,8 @@
       "muscle_group": "core",
       "kind": "isolation",
       "per_arm": false,
-      "equipment": "cable"
+      "equipment": "cable",
+      "image": "Standing_Cable_Wood_Chop.jpg"
     },
     {
       "name": "Паллоф-пресс в блоке",
@@ -261,7 +277,8 @@
       "muscle_group": "core",
       "kind": "isolation",
       "per_arm": false,
-      "equipment": "cable"
+      "equipment": "cable",
+      "image": "Pallof_Press_With_Rotation.jpg"
     },
     {
       "name": "Планка",
@@ -269,7 +286,8 @@
       "muscle_group": "core",
       "kind": "isometric",
       "per_arm": false,
-      "equipment": "bodyweight"
+      "equipment": "bodyweight",
+      "image": "Plank.jpg"
     },
     {
       "name": "Сидячий твист с весом",
@@ -280,7 +298,8 @@
       "muscle_group": "core",
       "kind": "isolation",
       "per_arm": false,
-      "equipment": "dumbbell"
+      "equipment": "dumbbell",
+      "image": "Russian_Twist.jpg"
     },
     {
       "name": "Скручивания с отягощением",
@@ -290,7 +309,8 @@
       "muscle_group": "core",
       "kind": "isolation",
       "per_arm": false,
-      "equipment": "dumbbell"
+      "equipment": "dumbbell",
+      "image": "Cable_Seated_Crunch.jpg"
     },
     {
       "name": "Face pull",
@@ -298,7 +318,8 @@
       "muscle_group": "delts-rear",
       "kind": "isolation",
       "per_arm": false,
-      "equipment": "cable"
+      "equipment": "cable",
+      "image": "Face_Pull.jpg"
     },
     {
       "name": "Внешняя ротация в блоке",
@@ -308,7 +329,8 @@
       "muscle_group": "delts-rear",
       "kind": "isolation",
       "per_arm": false,
-      "equipment": "cable"
+      "equipment": "cable",
+      "image": "External_Rotation_with_Cable.jpg"
     },
     {
       "name": "Обратные разведения",
@@ -316,7 +338,8 @@
       "muscle_group": "delts-rear",
       "kind": "isolation",
       "per_arm": false,
-      "equipment": "machine"
+      "equipment": "machine",
+      "image": "Cable_Rear_Delt_Fly.jpg"
     },
     {
       "name": "Ротация плеча с резинкой",
@@ -324,7 +347,8 @@
       "muscle_group": "delts-rear",
       "kind": "isolation",
       "per_arm": false,
-      "equipment": "band"
+      "equipment": "band",
+      "image": "External_Rotation_with_Band.jpg"
     },
     {
       "name": "Landmine-жим",
@@ -342,7 +366,8 @@
       "muscle_group": "delts-side",
       "kind": "compound",
       "per_arm": false,
-      "equipment": "machine"
+      "equipment": "machine",
+      "image": "Machine_Shoulder_Military_Press.jpg"
     },
     {
       "name": "Жим гантелей сидя",
@@ -352,7 +377,8 @@
       "muscle_group": "delts-side",
       "kind": "compound",
       "per_arm": true,
-      "equipment": "dumbbell"
+      "equipment": "dumbbell",
+      "image": "Seated_Dumbbell_Press.jpg"
     },
     {
       "name": "Подъём рук в стороны",
@@ -360,7 +386,8 @@
       "muscle_group": "delts-side",
       "kind": "isolation",
       "per_arm": true,
-      "equipment": "dumbbell"
+      "equipment": "dumbbell",
+      "image": "Side_Lateral_Raise.jpg"
     },
     {
       "name": "Вис на перекладине",
@@ -378,7 +405,8 @@
       "muscle_group": "forearms",
       "kind": "isolation",
       "per_arm": false,
-      "equipment": "dumbbell"
+      "equipment": "dumbbell",
+      "image": "Palms-Down_Wrist_Curl_Over_A_Bench.jpg"
     },
     {
       "name": "Прогулка фермера",
@@ -386,7 +414,8 @@
       "muscle_group": "forearms",
       "kind": "compound",
       "per_arm": true,
-      "equipment": "dumbbell"
+      "equipment": "dumbbell",
+      "image": "Farmers_Walk.jpg"
     },
     {
       "name": "Пронация/супинация с гантелью",
@@ -394,7 +423,8 @@
       "muscle_group": "forearms",
       "kind": "isolation",
       "per_arm": false,
-      "equipment": "dumbbell"
+      "equipment": "dumbbell",
+      "image": "Wrist_Rotations_with_Straight_Bar.jpg"
     },
     {
       "name": "Гиперэкстензия",
@@ -402,7 +432,8 @@
       "muscle_group": "glutes",
       "kind": "isolation",
       "per_arm": false,
-      "equipment": "bodyweight"
+      "equipment": "bodyweight",
+      "image": "Hyperextensions_Back_Extensions.jpg"
     },
     {
       "name": "Разведение ног",
@@ -410,7 +441,8 @@
       "muscle_group": "glutes",
       "kind": "isolation",
       "per_arm": false,
-      "equipment": "machine"
+      "equipment": "machine",
+      "image": "Thigh_Abductor.jpg"
     },
     {
       "name": "Свинги с гирей",
@@ -420,7 +452,8 @@
       "muscle_group": "glutes",
       "kind": "compound",
       "per_arm": false,
-      "equipment": "kettlebell"
+      "equipment": "kettlebell",
+      "image": "One-Arm_Kettlebell_Swings.jpg"
     },
     {
       "name": "Ягодичный мост",
@@ -430,7 +463,8 @@
       "muscle_group": "glutes",
       "kind": "compound",
       "per_arm": false,
-      "equipment": "barbell"
+      "equipment": "barbell",
+      "image": "Barbell_Hip_Thrust.jpg"
     },
     {
       "name": "Румынская тяга с гантелями",
@@ -440,7 +474,8 @@
       "muscle_group": "hamstrings",
       "kind": "compound",
       "per_arm": true,
-      "equipment": "dumbbell"
+      "equipment": "dumbbell",
+      "image": "Stiff-Legged_Dumbbell_Deadlift.jpg"
     },
     {
       "name": "Сгибания ног",
@@ -448,7 +483,8 @@
       "muscle_group": "hamstrings",
       "kind": "isolation",
       "per_arm": false,
-      "equipment": "machine"
+      "equipment": "machine",
+      "image": "Seated_Leg_Curl.jpg"
     },
     {
       "name": "Тяга верхнего блока",
@@ -458,7 +494,8 @@
       "muscle_group": "lats",
       "kind": "compound",
       "per_arm": false,
-      "equipment": "cable"
+      "equipment": "cable",
+      "image": "Wide-Grip_Lat_Pulldown.jpg"
     },
     {
       "name": "Рычажная тяга сидя",
@@ -466,7 +503,8 @@
       "muscle_group": "mid-back",
       "kind": "compound",
       "per_arm": true,
-      "equipment": "machine"
+      "equipment": "machine",
+      "image": "Leverage_High_Row.jpg"
     },
     {
       "name": "Тяга гантели в наклоне",
@@ -476,7 +514,8 @@
       "muscle_group": "mid-back",
       "kind": "compound",
       "per_arm": true,
-      "equipment": "dumbbell"
+      "equipment": "dumbbell",
+      "image": "One-Arm_Dumbbell_Row.jpg"
     },
     {
       "name": "Тяга нижнего блока",
@@ -484,7 +523,8 @@
       "muscle_group": "mid-back",
       "kind": "compound",
       "per_arm": false,
-      "equipment": "cable"
+      "equipment": "cable",
+      "image": "Seated_Cable_Rows.jpg"
     },
     {
       "name": "Тяга с упором в грудь",
@@ -497,7 +537,8 @@
         "тяга сидя с упором",
         "chest supported row",
         "грудная тяга"
-      ]
+      ],
+      "image": "Dumbbell_Incline_Row.jpg"
     },
     {
       "name": "Шея с резинкой",
@@ -509,7 +550,8 @@
       "muscle_group": "neck",
       "kind": "isometric",
       "per_arm": false,
-      "equipment": "band"
+      "equipment": "band",
+      "image": "Seated_Head_Harness_Neck_Resistance.jpg"
     },
     {
       "name": "Болгарский сплит-присед",
@@ -519,7 +561,8 @@
       "muscle_group": "quads",
       "kind": "compound",
       "per_arm": true,
-      "equipment": "dumbbell"
+      "equipment": "dumbbell",
+      "image": "Split_Squat_with_Dumbbells.jpg"
     },
     {
       "name": "Гоблет-присед",
@@ -527,7 +570,8 @@
       "muscle_group": "quads",
       "kind": "compound",
       "per_arm": false,
-      "equipment": "dumbbell"
+      "equipment": "dumbbell",
+      "image": "Goblet_Squat.jpg"
     },
     {
       "name": "Жим ногами",
@@ -535,7 +579,8 @@
       "muscle_group": "quads",
       "kind": "compound",
       "per_arm": false,
-      "equipment": "machine"
+      "equipment": "machine",
+      "image": "Leg_Press.jpg"
     },
     {
       "name": "Испанский присед с резиной",
@@ -556,7 +601,8 @@
       "muscle_group": "quads",
       "kind": "compound",
       "per_arm": false,
-      "equipment": "machine"
+      "equipment": "machine",
+      "image": "Smith_Machine_Squat.jpg"
     },
     {
       "name": "Брусья",
@@ -568,7 +614,8 @@
       "muscle_group": "triceps",
       "kind": "bodyweight",
       "per_arm": false,
-      "equipment": "bodyweight"
+      "equipment": "bodyweight",
+      "image": "Dips_-_Triceps_Version.jpg"
     },
     {
       "name": "Разгибания рук в блоке",
@@ -576,7 +623,8 @@
       "muscle_group": "triceps",
       "kind": "isolation",
       "per_arm": false,
-      "equipment": "cable"
+      "equipment": "cable",
+      "image": "Triceps_Pushdown_-_Rope_Attachment.jpg"
     }
   ]
 }
