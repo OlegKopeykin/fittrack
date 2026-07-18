@@ -129,31 +129,26 @@ export default function ExercisesPage() {
               const g = groupById.get(ex.muscle_group_id)
               const et = exerciseType(ex)
               return (
-                <li
-                  key={ex.id}
-                  className="flex items-center gap-3 border-b border-slate-800/60 px-5 py-3"
-                >
-                  <span className={`size-2.5 flex-none rounded-full ${g?.color ?? 'bg-slate-600'}`} />
-                  <div className="min-w-0 flex-1">
-                    <div className="font-medium text-slate-100">{ex.name}</div>
-                    <div className="text-xs text-slate-500">
-                      {g?.name_ru ?? '—'} · {kindLabel[ex.kind]}
-                      {ex.per_arm ? ' · на руку' : ''}
+                <li key={ex.id}>
+                  <Link
+                    to={`/exercises/${ex.id}`}
+                    className="flex items-center gap-3 border-b border-slate-800/60 px-5 py-3"
+                  >
+                    <span className={`size-2.5 flex-none rounded-full ${g?.color ?? 'bg-slate-600'}`} />
+                    <div className="min-w-0 flex-1">
+                      <div className="font-medium text-slate-100">{ex.name}</div>
+                      <div className="text-xs text-slate-500">
+                        {g?.name_ru ?? '—'} · {kindLabel[ex.kind]}
+                        {ex.per_arm ? ' · на руку' : ''}
+                      </div>
                     </div>
-                  </div>
-                  {et !== 'other' && (
-                    <span className={`flex-none rounded-full px-2 py-0.5 text-[10px] font-bold ${tagColor[et]}`}>
-                      {exTypeLabel[et]}
-                    </span>
-                  )}
-                  {!ex.global && (
-                    <Link
-                      to={`/exercises/${ex.id}/edit`}
-                      className="flex-none text-sm font-semibold text-slate-400"
-                    >
-                      Изменить
-                    </Link>
-                  )}
+                    {et !== 'other' && (
+                      <span className={`flex-none rounded-full px-2 py-0.5 text-[10px] font-bold ${tagColor[et]}`}>
+                        {exTypeLabel[et]}
+                      </span>
+                    )}
+                    <span className="flex-none text-slate-600">›</span>
+                  </Link>
                 </li>
               )
             })}

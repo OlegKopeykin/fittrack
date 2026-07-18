@@ -39,6 +39,21 @@ export function useCreateExercise() {
   })
 }
 
+export function useExerciseNote(id: number) {
+  return useQuery({
+    queryKey: ['exercise-note', id],
+    queryFn: () => exercisesApi.getNote(id),
+  })
+}
+
+export function useSetExerciseNote(id: number) {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: (note: string) => exercisesApi.setNote(id, note),
+    onSuccess: (data) => qc.setQueryData(['exercise-note', id], data),
+  })
+}
+
 export function useUpdateExercise(id: number) {
   const qc = useQueryClient()
   return useMutation({

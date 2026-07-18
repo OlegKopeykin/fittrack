@@ -8,6 +8,7 @@ import ProgramDetailPage from './pages/ProgramDetailPage'
 import ProgramBuilderPage from './pages/ProgramBuilderPage'
 import ExercisesPage from './pages/ExercisesPage'
 import ExerciseFormPage from './pages/ExerciseFormPage'
+import ExercisePage from './pages/ExercisePage'
 import ProgressPage from './pages/ProgressPage'
 import ProfilePage from './pages/ProfilePage'
 import RequireAuth from './components/RequireAuth'
@@ -34,6 +35,7 @@ export default function AppRoutes() {
         <Route path="/exercises" element={<ExercisesPage />} />
         <Route path="/exercises/new" element={<ExerciseFormPage />} />
         <Route path="/exercises/:id/edit" element={<ExerciseFormPage />} />
+        <Route path="/exercises/:id" element={<ExercisePage />} />
         <Route path="/progress" element={<ProgressPage />} />
         <Route path="/profile" element={<ProfilePage />} />
       </Route>
