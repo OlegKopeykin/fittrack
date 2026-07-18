@@ -147,6 +147,13 @@ type User struct {
 	CreatedAt    string
 }
 
+type UserExerciseNote struct {
+	UserID     int64
+	ExerciseID int64
+	Note       string
+	UpdatedAt  string
+}
+
 type Workout struct {
 	ID           int64
 	UserID       int64

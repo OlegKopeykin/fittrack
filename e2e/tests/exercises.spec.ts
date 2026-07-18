@@ -40,12 +40,31 @@ test('каталог: добавить своё упражнение и отре
   await expect(page.getByRole('heading', { name: 'Упражнения' })).toBeVisible()
   await expect(page.getByText(uniq)).toBeVisible()
 
-  // сужаем поиском, чтобы «Изменить» не перекрывался липкой панелью
+  // сужаем поиском и проваливаемся в карточку → оттуда «Изменить»
   await page.getByPlaceholder('Поиск по названию и синонимам').fill(uniq)
-  await page.getByRole('listitem').filter({ hasText: uniq }).getByRole('link', { name: 'Изменить' }).click()
+  await page.getByText(uniq).click()
+  await expect(page.getByRole('heading', { name: uniq })).toBeVisible()
+  await page.getByRole('link', { name: 'Изменить' }).click()
   await expect(page.getByRole('heading', { name: 'Изменить упражнение' })).toBeVisible()
   await expect(page.getByLabel('Название упражнения')).toHaveValue(uniq)
   await page.getByLabel('Название упражнения').fill(uniq + ' ✓')
   await page.getByRole('button', { name: 'Сохранить упражнение' }).click()
   await expect(page.getByText(uniq + ' ✓')).toBeVisible()
+})
+
+test('карточка упражнения: комментарий и лог', async ({ page }, testInfo) => {
+  test.skip(testInfo.project.name !== 'desktop-chrome', 'заметка — синглтон на пользователя')
+  await login(page)
+  await page.getByRole('link', { name: 'Упражнения' }).click()
+  await page.getByText('Присед в Смите').click()
+  await expect(page.getByRole('heading', { name: 'Присед в Смите' })).toBeVisible()
+
+  const note = 'Спина прямая ' + Date.now().toString().slice(-5)
+  await page.getByLabel('Комментарий к упражнению').fill(note)
+  await page.getByRole('button', { name: 'Сохранить' }).click()
+
+  // перезаходим — комментарий сохранился
+  await page.getByRole('link', { name: '‹ Назад' }).click()
+  await page.getByText('Присед в Смите').click()
+  await expect(page.getByLabel('Комментарий к упражнению')).toHaveValue(note)
 })

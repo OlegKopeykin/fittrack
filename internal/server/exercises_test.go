@@ -7,6 +7,33 @@ import (
 	"github.com/OlegKopeykin/fittrack/internal/testutil"
 )
 
+func TestExerciseNoteRoundtrip(t *testing.T) {
+	ts := testutil.NewTestServer(t, nil)
+	ownerSession(t, ts)
+	ex := anExerciseID(t, ts, "Присед") // глобальное
+
+	var g struct {
+		Note string `json:"note"`
+	}
+	testutil.DecodeJSON(t, ts.Get(t, "/api/v1/exercises/"+itoa(ex)+"/note"), &g)
+	if g.Note != "" {
+		t.Errorf("заметка по умолчанию = %q, want пусто", g.Note)
+	}
+
+	put := putJSON(t, ts, "/api/v1/exercises/"+itoa(ex)+"/note", map[string]any{"note": "тянуть лопатками"})
+	if put.StatusCode != http.StatusOK {
+		t.Fatalf("put note: status = %d", put.StatusCode)
+	}
+
+	var g2 struct {
+		Note string `json:"note"`
+	}
+	testutil.DecodeJSON(t, ts.Get(t, "/api/v1/exercises/"+itoa(ex)+"/note"), &g2)
+	if g2.Note != "тянуть лопатками" {
+		t.Errorf("заметка после PUT = %q", g2.Note)
+	}
+}
+
 // ownerSession регистрирует owner-пользователя и оставляет сессию в jar.
 func ownerSession(t *testing.T, ts *testutil.TestServer) {
 	t.Helper()

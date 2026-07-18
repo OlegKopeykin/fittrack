@@ -18,6 +18,8 @@ export type Exercise = {
   per_arm: boolean
   technique_notes: string
   equipment?: string
+  has_image?: boolean
+  image_url?: string
   global: boolean
   archived: boolean
   aliases?: string[]
@@ -49,6 +51,9 @@ export const exercisesApi = {
   get: (id: number) => api.get<Exercise>(`/api/v1/exercises/${id}`),
   create: (body: NewExercise) => api.post<Exercise>('/api/v1/exercises', body),
   update: (id: number, body: NewExercise) => api.patch<Exercise>(`/api/v1/exercises/${id}`, body),
+  getNote: (id: number) => api.get<{ note: string }>(`/api/v1/exercises/${id}/note`),
+  setNote: (id: number, note: string) =>
+    api.put<{ note: string }>(`/api/v1/exercises/${id}/note`, { note }),
 }
 
 export const equipmentLabel: Record<string, string> = {

@@ -60,10 +60,13 @@ function resetTelegram() {
   mockTelegram.last_sent_at = ''
 }
 
+export const mockNote = { value: '' }
+
 export function resetMock() {
   mockState.me = null
   seedWorkouts()
   resetTelegram()
+  mockNote.value = ''
 }
 
 function errorBody(code: string, message: string, fields?: Record<string, string>) {
@@ -190,10 +193,18 @@ export const handlers = [
       per_arm: false,
       technique_notes: 'спина прямая',
       equipment: 'barbell',
+      has_image: false,
       global: false,
       archived: false,
     }),
   ),
+
+  http.get('/api/v1/exercises/:id/note', () => HttpResponse.json({ note: mockNote.value })),
+  http.put('/api/v1/exercises/:id/note', async ({ request }) => {
+    const b = (await request.json()) as { note: string }
+    mockNote.value = b.note
+    return HttpResponse.json({ note: b.note })
+  }),
 
   http.patch('/api/v1/exercises/:id', async ({ params, request }) => {
     const b = (await request.json()) as Record<string, unknown>
