@@ -15,6 +15,7 @@ import (
 	"github.com/go-chi/chi/v5/middleware"
 
 	"github.com/OlegKopeykin/fittrack/internal/db/gen"
+	"github.com/OlegKopeykin/fittrack/internal/telegram"
 )
 
 // Options — зависимости HTTP-сервера.
@@ -28,6 +29,10 @@ type Options struct {
 	SecureCookies bool
 	// Now — источник времени (тесты подменяют).
 	Now func() time.Time
+	// Telegram — клиент Bot API (тесты подменяют фейком). nil — реальный HTTP.
+	Telegram telegram.Client
+	// Version — версия приложения, попадает в экспорт.
+	Version string
 }
 
 type server struct {
@@ -42,6 +47,9 @@ type server struct {
 func New(opts Options) http.Handler {
 	if opts.Now == nil {
 		opts.Now = time.Now
+	}
+	if opts.Telegram == nil {
+		opts.Telegram = telegram.New()
 	}
 
 	sessions := scs.New()
@@ -107,6 +115,14 @@ func New(opts Options) http.Handler {
 				priv.Post("/programs/{id}/archive", s.handleArchiveProgram)
 				priv.Post("/programs/{id}/unarchive", s.handleUnarchiveProgram)
 				priv.Get("/program-days/{id}", s.handleGetProgramDay)
+
+				// Экспорт лога и настройки Telegram.
+				priv.Get("/profile/telegram", s.handleGetTelegram)
+				priv.Put("/profile/telegram", s.handleSetTelegram)
+				priv.Post("/profile/telegram/link", s.handleLinkTelegram)
+				priv.Post("/profile/telegram/test", s.handleTestTelegram)
+				priv.Delete("/profile/telegram", s.handleDeleteTelegram)
+				priv.Get("/profile/export", s.handleExportDownload)
 
 				// Персональные API-токены (только из cookie-сессии).
 				priv.Get("/tokens", s.handleListTokens)

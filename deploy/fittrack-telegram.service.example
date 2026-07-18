@@ -1,0 +1,13 @@
+# Шаблон systemd-юнита. Установить как /etc/systemd/system/fittrack-telegram.service
+# Ночная выгрузка лога в Telegram: обходит пользователей с включённым экспортом
+# и шлёт бэкап тем, у кого подошёл срок по частоте. Запускается таймером.
+[Unit]
+Description=FitTrack Telegram export
+After=fittrack.service
+
+[Service]
+Type=oneshot
+User=fittrack
+Group=fittrack
+Environment=FITTRACK_DB=/var/lib/fittrack/fittrack.db
+ExecStart=/opt/fittrack/bin/fittrack admin export-telegram

@@ -18,6 +18,7 @@ import (
 	"github.com/OlegKopeykin/fittrack/internal/db"
 	"github.com/OlegKopeykin/fittrack/internal/db/gen"
 	"github.com/OlegKopeykin/fittrack/internal/seed"
+	"github.com/OlegKopeykin/fittrack/internal/telegram"
 	"github.com/OlegKopeykin/fittrack/internal/server"
 )
 
@@ -50,6 +51,15 @@ type TestServer struct {
 // NewTestServer собирает полный роутер поверх свежей БД.
 // clock == nil — реальное время.
 func NewTestServer(t *testing.T, clock func() time.Time) *TestServer {
+	return newTestServer(t, clock, nil)
+}
+
+// NewTestServerTG — тестовый сервер с подменённым Telegram-клиентом.
+func NewTestServerTG(t *testing.T, clock func() time.Time, tg telegram.Client) *TestServer {
+	return newTestServer(t, clock, tg)
+}
+
+func newTestServer(t *testing.T, clock func() time.Time, tg telegram.Client) *TestServer {
 	t.Helper()
 	conn := NewTestDB(t)
 	static := fstest.MapFS{
@@ -58,7 +68,7 @@ func NewTestServer(t *testing.T, clock func() time.Time) *TestServer {
 	if err := seed.LoadCatalog(t.Context(), conn); err != nil {
 		t.Fatalf("testutil: seed: %v", err)
 	}
-	h := server.New(server.Options{DB: conn, Static: static, Now: clock})
+	h := server.New(server.Options{DB: conn, Static: static, Now: clock, Telegram: tg})
 	srv := httptest.NewServer(h)
 	t.Cleanup(srv.Close)
 

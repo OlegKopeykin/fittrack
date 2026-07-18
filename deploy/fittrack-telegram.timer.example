@@ -1,0 +1,12 @@
+# Шаблон systemd-таймера. Установить как /etc/systemd/system/fittrack-telegram.timer
+# Ежедневно в 00:00; частота выгрузки для каждого пользователя (день/неделя/месяц)
+# решается внутри команды по last_sent_at. Persistent — догоняет пропуск.
+[Unit]
+Description=Ночная выгрузка лога FitTrack в Telegram
+
+[Timer]
+OnCalendar=*-*-* 00:00:00
+Persistent=true
+
+[Install]
+WantedBy=timers.target

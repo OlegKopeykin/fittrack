@@ -127,6 +127,17 @@ type Set struct {
 	CreatedAt   string
 }
 
+type TelegramSetting struct {
+	UserID      int64
+	BotToken    string
+	BotUsername string
+	ChatID      string
+	Enabled     int64
+	Frequency   string
+	LastSentAt  string
+	UpdatedAt   string
+}
+
 type User struct {
 	ID           int64
 	Username     string

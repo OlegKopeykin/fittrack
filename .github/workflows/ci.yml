@@ -67,7 +67,7 @@ jobs:
           CGO_ENABLED: "0"
           GOOS: linux
           GOARCH: amd64
-        run: go build -tags embedweb -trimpath -ldflags="-s -w" -o fittrack ./cmd/fittrack
+        run: go build -tags embedweb -trimpath -ldflags="-s -w -X main.appVersion=$(cat VERSION)" -o fittrack ./cmd/fittrack
       - uses: actions/upload-artifact@v4
         with:
           name: fittrack
@@ -100,7 +100,7 @@ jobs:
           CGO_ENABLED: "0"
           GOOS: linux
           GOARCH: amd64
-        run: go build -tags "embedweb e2eseed" -trimpath -o fittrack ./cmd/fittrack
+        run: go build -tags "embedweb e2eseed" -trimpath -ldflags="-X main.appVersion=$(cat VERSION)" -o fittrack ./cmd/fittrack
       - uses: actions/upload-artifact@v4
         with:
           name: fittrack-e2e
