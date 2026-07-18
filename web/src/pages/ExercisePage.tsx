@@ -64,7 +64,7 @@ export default function ExercisePage() {
               <img
                 src={ex.data.image_url}
                 alt={ex.data.name}
-                className="mb-4 max-h-64 w-full rounded-2xl border border-slate-800 object-cover"
+                className="mb-4 max-h-80 w-full rounded-2xl border border-slate-800 bg-slate-950 object-contain"
               />
             )}
 
