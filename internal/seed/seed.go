@@ -17,9 +17,10 @@ import (
 //go:embed catalog.json
 var catalogJSON []byte
 
-// Иллюстрации упражнений (public domain, free-exercise-db).
+// Иллюстрации упражнений — схематичный лайн-арт движения на оборудовании
+// (Everkinetic, CC BY-SA 3.0). Атрибуция — в images/SOURCE.md.
 //
-//go:embed images/*.jpg
+//go:embed images/*.png
 var imagesFS embed.FS
 
 type catalog struct {
@@ -129,7 +130,7 @@ func LoadCatalog(ctx context.Context, conn *sql.DB) error {
 					return fmt.Errorf("seed: картинка %q: %w", ex.Image, err)
 				}
 				if err := q.SetExerciseImage(ctx, gen.SetExerciseImageParams{
-					ExerciseID: exID, ContentType: "image/jpeg", Bytes: data, UpdatedAt: now,
+					ExerciseID: exID, ContentType: "image/png", Bytes: data, UpdatedAt: now,
 				}); err != nil {
 					return fmt.Errorf("seed: установка картинки %q: %w", ex.Name, err)
 				}
