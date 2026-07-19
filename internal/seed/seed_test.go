@@ -84,6 +84,17 @@ func TestLoadCatalogIsIdempotent(t *testing.T) {
 	if !has {
 		t.Error("у «Жим гантелей лёжа» нет картинки после сида")
 	}
+
+	// станочные упражнения тоже получают схему тренажёра
+	var legPressID int64
+	for _, e := range list {
+		if e.Name == "Жим ногами" {
+			legPressID = e.ID
+		}
+	}
+	if has, _ := q.HasExerciseImage(ctx, legPressID); !has {
+		t.Error("у «Жим ногами» нет схемы тренажёра после сида")
+	}
 }
 
 func TestCatalogAliasesSearchable(t *testing.T) {

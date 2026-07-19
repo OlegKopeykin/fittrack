@@ -115,7 +115,8 @@
       "muscle_group": "adductors",
       "kind": "isolation",
       "per_arm": false,
-      "equipment": "machine"
+      "equipment": "machine",
+      "image": "Thigh-adductor.png"
     },
     {
       "name": "Молотки с гантелями",
@@ -135,7 +136,8 @@
       "muscle_group": "biceps",
       "kind": "isolation",
       "per_arm": false,
-      "equipment": "cable"
+      "equipment": "cable",
+      "image": "Standing-biceps-curl-with-cable.png"
     },
     {
       "name": "Жим носками в платформе",
@@ -425,7 +427,8 @@
       "muscle_group": "glutes",
       "kind": "isolation",
       "per_arm": false,
-      "equipment": "machine"
+      "equipment": "machine",
+      "image": "Thigh-abductor.png"
     },
     {
       "name": "Свинги с гирей",
@@ -518,7 +521,8 @@
         "тяга сидя с упором",
         "chest supported row",
         "грудная тяга"
-      ]
+      ],
+      "image": "T-bar-row.png"
     },
     {
       "name": "Шея с резинкой",
@@ -559,7 +563,8 @@
       "muscle_group": "quads",
       "kind": "compound",
       "per_arm": false,
-      "equipment": "machine"
+      "equipment": "machine",
+      "image": "Leg-press.png"
     },
     {
       "name": "Испанский присед с резиной",
@@ -580,7 +585,8 @@
       "muscle_group": "quads",
       "kind": "compound",
       "per_arm": false,
-      "equipment": "machine"
+      "equipment": "machine",
+      "image": "Smith-machine-squats.png"
     },
     {
       "name": "Брусья",
@@ -600,7 +606,8 @@
       "muscle_group": "triceps",
       "kind": "isolation",
       "per_arm": false,
-      "equipment": "cable"
+      "equipment": "cable",
+      "image": "Triceps-pushdown-with-cable.png"
     }
   ]
 }
