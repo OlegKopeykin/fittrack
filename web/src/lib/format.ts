@@ -2,6 +2,15 @@ import type { WorkoutSet } from '../api/training'
 
 const ruDate = new Intl.DateTimeFormat('ru-RU', { day: 'numeric', month: 'long', year: 'numeric' })
 
+// parseDecimal — число из пользовательского ввода; точка и запятая
+// равнозначны как десятичный разделитель ('26,5' → 26.5).
+// Пустая строка → undefined, нечисловой ввод → NaN.
+export function parseDecimal(raw: string): number | undefined {
+  const s = raw.trim()
+  if (s === '') return undefined
+  return Number(s.replace(',', '.'))
+}
+
 export function formatDate(iso: string): string {
   // iso = YYYY-MM-DD
   const [y, m, d] = iso.split('-').map(Number)

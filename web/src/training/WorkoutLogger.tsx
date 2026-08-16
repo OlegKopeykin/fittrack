@@ -13,7 +13,7 @@ import {
   useDeleteWorkout,
 } from './useTraining'
 import { PageHeader } from '../components/AppShell'
-import { formatSet } from '../lib/format'
+import { formatSet, parseDecimal } from '../lib/format'
 import ExercisePicker from './ExercisePicker'
 
 function uid(): string {
@@ -286,7 +286,7 @@ function LoggedRow({
   const [bv, setBv] = useState(b?.toString() ?? '')
 
   function commit(field: 'a' | 'b', raw: string) {
-    const num = raw === '' ? undefined : Number(raw)
+    const num = parseDecimal(raw)
     if (num !== undefined && Number.isNaN(num)) return
     const key = cardio
       ? field === 'a'
@@ -324,6 +324,7 @@ function LoggedRow({
             value={av}
             onChange={(e) => setAv(e.target.value)}
             onBlur={(e) => commit('a', e.target.value)}
+            aria-label="вес"
             className="w-full rounded-lg border border-emerald-500/30 bg-emerald-500/5 px-1 py-1.5 text-center text-[15px] font-bold text-emerald-100"
           />
         </td>
@@ -334,6 +335,7 @@ function LoggedRow({
           value={bv}
           onChange={(e) => setBv(e.target.value)}
           onBlur={(e) => commit('b', e.target.value)}
+          aria-label="повторы"
           className="w-full rounded-lg border border-emerald-500/30 bg-emerald-500/5 px-1 py-1.5 text-center text-[15px] font-bold text-emerald-100"
         />
       </td>
@@ -389,15 +391,16 @@ function ComposeRow({
   }
 
   function bump(setter: (v: string) => void, cur: string, by: number) {
-    const n = cur === '' ? 0 : Number(cur)
+    const n = parseDecimal(cur) ?? 0
     if (Number.isNaN(n)) return
     setter(String(Math.max(0, Math.round((n + by) * 100) / 100)))
   }
 
   function log() {
-    const a = av === '' ? undefined : Number(av)
-    const b = bv === '' ? undefined : Number(bv)
+    const a = parseDecimal(av)
+    const b = parseDecimal(bv)
     if (a === undefined && b === undefined) return
+    if ((a !== undefined && Number.isNaN(a)) || (b !== undefined && Number.isNaN(b))) return
     const body: Partial<import('../api/training').NewSet> = {
       role: 'working',
       client_id: clientId.current,
@@ -557,12 +560,13 @@ function FinishSheet({
         <button
           type="button"
           disabled={pending}
-          onClick={() =>
+          onClick={() => {
+            const n = parseDecimal(bw)
             onFinish({
-              bodyweight_kg: bw === '' ? undefined : Number(bw),
+              bodyweight_kg: n !== undefined && !Number.isNaN(n) ? n : undefined,
               feeling: feeling || undefined,
             })
-          }
+          }}
           className="w-full rounded-xl bg-emerald-500 py-3.5 text-[15px] font-extrabold text-emerald-950 disabled:opacity-60"
         >
           Сохранить и завершить
