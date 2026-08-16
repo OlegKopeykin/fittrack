@@ -1,4 +1,4 @@
-import { screen } from '@testing-library/react'
+import { screen, waitFor } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { Routes, Route } from 'react-router-dom'
 import { renderApp } from '../test/render'
@@ -62,6 +62,68 @@ describe('WorkoutLogger', () => {
     await user.click(await screen.findByRole('button', { name: '60×10' }))
     expect(screen.getByLabelText('вес')).toHaveValue('60')
     expect(screen.getByLabelText('повторы')).toHaveValue('10')
+  })
+
+  it('вес с запятой логируется как число', async () => {
+    authed()
+    seedActive(906)
+    const user = userEvent.setup()
+    routes('/workout/906')
+
+    await screen.findByText('Присед в Смите')
+    await user.type(screen.getByLabelText('вес'), '26,5')
+    await user.type(screen.getByLabelText('повторы'), '8')
+    await user.click(screen.getByRole('button', { name: 'Записать подход' }))
+
+    await screen.findByRole('button', { name: 'Снять отметку' })
+    expect(mockWorkouts.get(906)?.sets[0]?.weight_kg).toBe(26.5)
+  })
+
+  it('запятая при редактировании подхода сохраняется', async () => {
+    authed()
+    seedActive(907, {
+      sets: [{ id: 71, exercise_id: 10, position: 0, role: 'working', weight_kg: 60, reps: 10 }],
+    })
+    const user = userEvent.setup()
+    routes('/workout/907')
+
+    await screen.findByText('Присед в Смите')
+    const weight = screen.getAllByLabelText('вес')[0]
+    await user.clear(weight)
+    await user.type(weight, '62,5')
+    await user.tab()
+
+    await waitFor(() => {
+      expect(mockWorkouts.get(907)?.sets[0]?.weight_kg).toBe(62.5)
+    })
+  })
+
+  it('вес тела с запятой сохраняется при завершении', async () => {
+    authed()
+    seedActive(908)
+    const user = userEvent.setup()
+    routes('/workout/908')
+
+    await screen.findByText('Присед в Смите')
+    await user.click(screen.getByRole('button', { name: 'Завершить' }))
+    await user.type(await screen.findByLabelText('Вес тела'), '86,5')
+    await user.click(screen.getByRole('button', { name: 'Сохранить и завершить' }))
+
+    await screen.findByText('История экран')
+    expect(mockWorkouts.get(908)?.bodyweight_kg).toBe(86.5)
+  })
+
+  it('степпер работает от значения с запятой', async () => {
+    authed()
+    seedActive(909)
+    const user = userEvent.setup()
+    routes('/workout/909')
+
+    await screen.findByText('Присед в Смите')
+    const weight = screen.getByLabelText('вес')
+    await user.type(weight, '26,5')
+    await user.click(screen.getByRole('button', { name: 'плюс' }))
+    expect(weight).toHaveValue('29')
   })
 
   it('степперы меняют вес на ±2.5', async () => {
