@@ -159,28 +159,36 @@ func (s *server) insertDays(ctx context.Context, qtx *gen.Queries, progID int64,
 		if err != nil {
 			return http.StatusInternalServerError, "internal", nil
 		}
-		for pi, p := range d.Exercises {
-			exID := p.ExerciseID
-			if exID == 0 && p.ExerciseName != "" {
-				id, ok := idByName[strings.TrimSpace(p.ExerciseName)]
-				if !ok {
-					return http.StatusBadRequest, "invalid_input",
-						map[string]string{"exercise": "неизвестное упражнение: " + p.ExerciseName}
-				}
-				exID = id
-			}
-			if exID == 0 {
+		if status, code, fields := s.insertPrescriptions(ctx, qtx, day.ID, d.Exercises, idByName); status != 0 {
+			return status, code, fields
+		}
+	}
+	return 0, "", nil
+}
+
+// insertPrescriptions вставляет предписания одного дня программы. status 0 — успех.
+func (s *server) insertPrescriptions(ctx context.Context, qtx *gen.Queries, dayID int64, exercises []prescriptionInput, idByName map[string]int64) (int, string, map[string]string) {
+	for pi, p := range exercises {
+		exID := p.ExerciseID
+		if exID == 0 && p.ExerciseName != "" {
+			id, ok := idByName[strings.TrimSpace(p.ExerciseName)]
+			if !ok {
 				return http.StatusBadRequest, "invalid_input",
-					map[string]string{"exercise": "нужен exercise_id или exercise_name"}
+					map[string]string{"exercise": "неизвестное упражнение: " + p.ExerciseName}
 			}
-			if _, err := qtx.CreatePrescription(ctx, gen.CreatePrescriptionParams{
-				ProgramDayID: day.ID, ExerciseID: exID, Position: int64(pi),
-				Sets: int64(p.Sets), RepMin: intToNull(p.RepMin), RepMax: intToNull(p.RepMax),
-				WeightMinG: kgToGrams(p.WeightMinKg), WeightMaxG: kgToGrams(p.WeightMaxKg),
-				RestSec: intToNull(p.RestSec), Tempo: p.Tempo, Notes: p.Notes,
-			}); err != nil {
-				return http.StatusInternalServerError, "internal", nil
-			}
+			exID = id
+		}
+		if exID == 0 {
+			return http.StatusBadRequest, "invalid_input",
+				map[string]string{"exercise": "нужен exercise_id или exercise_name"}
+		}
+		if _, err := qtx.CreatePrescription(ctx, gen.CreatePrescriptionParams{
+			ProgramDayID: dayID, ExerciseID: exID, Position: int64(pi),
+			Sets: int64(p.Sets), RepMin: intToNull(p.RepMin), RepMax: intToNull(p.RepMax),
+			WeightMinG: kgToGrams(p.WeightMinKg), WeightMaxG: kgToGrams(p.WeightMaxKg),
+			RestSec: intToNull(p.RestSec), Tempo: p.Tempo, Notes: p.Notes,
+		}); err != nil {
+			return http.StatusInternalServerError, "internal", nil
 		}
 	}
 	return 0, "", nil
@@ -220,8 +228,11 @@ func (s *server) handleUpdateProgram(w http.ResponseWriter, r *http.Request) {
 	writeJSON(w, http.StatusOK, dto)
 }
 
-// updateProgram заменяет содержимое программы (имя, дни, предписания) целиком
-// в одной транзакции. Возвращает статус; ответ пишет вызывающий после tx.
+// updateProgram обновляет имя/описание программы и содержимое дней, сохраняя
+// id существующих дней (сопоставление по позиции) — иначе тренировки,
+// ссылающиеся на program_day_id, теряют привязку (ON DELETE SET NULL).
+// Предписания дня пересоздаются целиком; лишние дни удаляются, недостающие —
+// создаются. Одна транзакция; ответ пишет вызывающий после её закрытия.
 func (s *server) updateProgram(r *http.Request, uid, progID int64, in programInput) (int, string, map[string]string) {
 	ctx := r.Context()
 	all, err := s.q.ListExercisesForUser(ctx, nullInt(uid))
@@ -249,12 +260,43 @@ func (s *server) updateProgram(r *http.Request, uid, progID int64, in programInp
 	if rows == 0 {
 		return http.StatusNotFound, "not_found", nil
 	}
-	if err := qtx.DeleteProgramDays(ctx, progID); err != nil {
+
+	existing, err := qtx.ListProgramDays(ctx, progID)
+	if err != nil {
 		return http.StatusInternalServerError, "internal", nil
 	}
-	if status, code, fields := s.insertDays(ctx, qtx, progID, in.Days, idByName); status != 0 {
-		return status, code, fields
+
+	for di, d := range in.Days {
+		var dayID int64
+		if di < len(existing) {
+			dayID = existing[di].ID
+			if _, err := qtx.UpdateProgramDay(ctx, gen.UpdateProgramDayParams{
+				Name: d.Name, Notes: d.Notes, ID: dayID,
+			}); err != nil {
+				return http.StatusInternalServerError, "internal", nil
+			}
+			if err := qtx.DeletePrescriptionsForDay(ctx, dayID); err != nil {
+				return http.StatusInternalServerError, "internal", nil
+			}
+		} else {
+			day, err := qtx.CreateProgramDay(ctx, gen.CreateProgramDayParams{
+				ProgramID: progID, Position: int64(di), Name: d.Name, Notes: d.Notes,
+			})
+			if err != nil {
+				return http.StatusInternalServerError, "internal", nil
+			}
+			dayID = day.ID
+		}
+		if status, code, fields := s.insertPrescriptions(ctx, qtx, dayID, d.Exercises, idByName); status != 0 {
+			return status, code, fields
+		}
 	}
+	for i := len(in.Days); i < len(existing); i++ {
+		if err := qtx.DeleteProgramDay(ctx, existing[i].ID); err != nil {
+			return http.StatusInternalServerError, "internal", nil
+		}
+	}
+
 	if err := tx.Commit(); err != nil {
 		return http.StatusInternalServerError, "internal", nil
 	}

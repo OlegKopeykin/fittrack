@@ -73,6 +73,42 @@ function errorBody(code: string, message: string, fields?: Record<string, string
   return { error: { code, message, ...(fields ? { fields } : {}) } }
 }
 
+type MockPrescriptionIn = {
+  exercise_id: number
+  sets?: number
+  rep_min?: number
+  rep_max?: number
+  weight_min_kg?: number
+  weight_max_kg?: number
+  rest_sec?: number
+  tempo?: string
+  notes?: string
+}
+type MockDayIn = { name: string; notes?: string; exercises?: MockPrescriptionIn[] }
+type MockProgramIn = { name: string; description?: string; days?: MockDayIn[] }
+
+function echoProgramDays(days: MockDayIn[]) {
+  return days.map((d, i) => ({
+    id: 7000 + i,
+    position: i,
+    name: d.name,
+    notes: d.notes ?? '',
+    exercises: (d.exercises ?? []).map((e, j) => ({
+      id: 70000 + i * 100 + j,
+      exercise_id: e.exercise_id,
+      position: j,
+      sets: e.sets ?? 0,
+      rep_min: e.rep_min,
+      rep_max: e.rep_max,
+      weight_min_kg: e.weight_min_kg,
+      weight_max_kg: e.weight_max_kg,
+      rest_sec: e.rest_sec,
+      tempo: e.tempo ?? '',
+      notes: e.notes ?? '',
+    })),
+  }))
+}
+
 export const handlers = [
   http.get('/api/v1/auth/me', () => {
     if (!mockState.me) {
@@ -227,53 +263,25 @@ export const handlers = [
   ),
 
   http.post('/api/v1/programs', async ({ request }) => {
-    const body = (await request.json()) as {
-      name: string
-      description?: string
-      days?: { name: string; exercises?: { exercise_id: number }[] }[]
-    }
+    const body = (await request.json()) as MockProgramIn
     return HttpResponse.json(
       {
         id: 700,
         name: body.name,
         description: body.description ?? '',
-        days: (body.days ?? []).map((d, i) => ({
-          id: 7000 + i,
-          position: i,
-          name: d.name,
-          exercises: (d.exercises ?? []).map((e, j) => ({
-            id: 70000 + i * 100 + j,
-            exercise_id: e.exercise_id,
-            position: j,
-            sets: 0,
-          })),
-        })),
+        days: echoProgramDays(body.days ?? []),
       },
       { status: 201 },
     )
   }),
 
   http.put('/api/v1/programs/:id', async ({ params, request }) => {
-    const body = (await request.json()) as {
-      name: string
-      description?: string
-      days?: { name: string; exercises?: { exercise_id: number }[] }[]
-    }
+    const body = (await request.json()) as MockProgramIn
     return HttpResponse.json({
       id: Number(params.id),
       name: body.name,
       description: body.description ?? '',
-      days: (body.days ?? []).map((d, i) => ({
-        id: 7000 + i,
-        position: i,
-        name: d.name,
-        exercises: (d.exercises ?? []).map((e, j) => ({
-          id: 70000 + i * 100 + j,
-          exercise_id: e.exercise_id,
-          position: j,
-          sets: 0,
-        })),
-      })),
+      days: echoProgramDays(body.days ?? []),
     })
   }),
 
@@ -287,8 +295,12 @@ export const handlers = [
           id: 11,
           position: 0,
           name: 'День A',
+          notes: 'разминка 5 минут',
           exercises: [
-            { id: 100, exercise_id: 10, position: 0, sets: 3, rep_min: 6, rep_max: 10, weight_min_kg: 70, weight_max_kg: 90, tempo: '3-0-1' },
+            {
+              id: 100, exercise_id: 10, position: 0, sets: 3, rep_min: 6, rep_max: 10,
+              weight_min_kg: 70, weight_max_kg: 90, rest_sec: 90, tempo: '3-0-1', notes: 'делать медленно',
+            },
           ],
         },
       ],
