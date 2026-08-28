@@ -125,6 +125,15 @@ func (q *Queries) CreateProgramDay(ctx context.Context, arg CreateProgramDayPara
 	return i, err
 }
 
+const deletePrescriptionsForDay = `-- name: DeletePrescriptionsForDay :exec
+DELETE FROM prescriptions WHERE program_day_id = ?
+`
+
+func (q *Queries) DeletePrescriptionsForDay(ctx context.Context, programDayID int64) error {
+	_, err := q.db.ExecContext(ctx, deletePrescriptionsForDay, programDayID)
+	return err
+}
+
 const deleteProgram = `-- name: DeleteProgram :execrows
 DELETE FROM programs WHERE id = ? AND user_id = ?
 `
@@ -142,12 +151,12 @@ func (q *Queries) DeleteProgram(ctx context.Context, arg DeleteProgramParams) (i
 	return result.RowsAffected()
 }
 
-const deleteProgramDays = `-- name: DeleteProgramDays :exec
-DELETE FROM program_days WHERE program_id = ?
+const deleteProgramDay = `-- name: DeleteProgramDay :exec
+DELETE FROM program_days WHERE id = ?
 `
 
-func (q *Queries) DeleteProgramDays(ctx context.Context, programID int64) error {
-	_, err := q.db.ExecContext(ctx, deleteProgramDays, programID)
+func (q *Queries) DeleteProgramDay(ctx context.Context, id int64) error {
+	_, err := q.db.ExecContext(ctx, deleteProgramDay, id)
 	return err
 }
 
@@ -381,6 +390,24 @@ func (q *Queries) UpdateProgram(ctx context.Context, arg UpdateProgramParams) (i
 		arg.ID,
 		arg.UserID,
 	)
+	if err != nil {
+		return 0, err
+	}
+	return result.RowsAffected()
+}
+
+const updateProgramDay = `-- name: UpdateProgramDay :execrows
+UPDATE program_days SET name = ?, notes = ? WHERE id = ?
+`
+
+type UpdateProgramDayParams struct {
+	Name  string
+	Notes string
+	ID    int64
+}
+
+func (q *Queries) UpdateProgramDay(ctx context.Context, arg UpdateProgramDayParams) (int64, error) {
+	result, err := q.db.ExecContext(ctx, updateProgramDay, arg.Name, arg.Notes, arg.ID)
 	if err != nil {
 		return 0, err
 	}

@@ -6,11 +6,51 @@ import {
   useProgram,
   useExerciseMap,
 } from '../training/useTraining'
+import type { NewPrescription } from '../api/training'
 import { PageHeader } from '../components/AppShell'
 import ExercisePicker from '../training/ExercisePicker'
 
-type BExercise = { id: number; name: string }
-type BDay = { name: string; exercises: BExercise[] }
+// Число как строка в инпуте: пустая строка = не задано → в payload не попадает (null/undefined).
+type NumField = number | ''
+
+type BExercise = {
+  id: number
+  name: string
+  sets: NumField
+  rep_min: NumField
+  rep_max: NumField
+  weight_min_kg: NumField
+  weight_max_kg: NumField
+  rest_sec: NumField
+  tempo: string
+  notes: string
+}
+type BDay = { name: string; notes: string; exercises: BExercise[] }
+
+function blankExercise(id: number, name: string): BExercise {
+  return {
+    id,
+    name,
+    sets: '',
+    rep_min: '',
+    rep_max: '',
+    weight_min_kg: '',
+    weight_max_kg: '',
+    rest_sec: '',
+    tempo: '',
+    notes: '',
+  }
+}
+
+function numOrUndef(v: NumField): number | undefined {
+  return v === '' ? undefined : v
+}
+
+function parseNum(raw: string): NumField {
+  if (raw.trim() === '') return ''
+  const n = Number(raw)
+  return Number.isNaN(n) ? '' : n
+}
 
 export default function ProgramBuilderPage() {
   const navigate = useNavigate()
@@ -24,7 +64,8 @@ export default function ProgramBuilderPage() {
   const exMap = useExerciseMap()
 
   const [name, setName] = useState('')
-  const [days, setDays] = useState<BDay[]>([{ name: 'День 1', exercises: [] }])
+  const [description, setDescription] = useState('')
+  const [days, setDays] = useState<BDay[]>([{ name: 'День 1', notes: '', exercises: [] }])
   const [pickingDay, setPickingDay] = useState<number | null>(null)
 
   // Предзаполнение при правке — один раз, когда пришли программа и карта имён.
@@ -32,12 +73,22 @@ export default function ProgramBuilderPage() {
   useEffect(() => {
     if (editing && !seeded.current && program.data && exMap.data) {
       setName(program.data.name)
+      setDescription(program.data.description ?? '')
       setDays(
         (program.data.days ?? []).map((d) => ({
           name: d.name,
+          notes: d.notes ?? '',
           exercises: d.exercises.map((rx) => ({
             id: rx.exercise_id,
             name: exMap.data!.get(rx.exercise_id)?.name ?? `Упражнение #${rx.exercise_id}`,
+            sets: rx.sets ?? '',
+            rep_min: rx.rep_min ?? '',
+            rep_max: rx.rep_max ?? '',
+            weight_min_kg: rx.weight_min_kg ?? '',
+            weight_max_kg: rx.weight_max_kg ?? '',
+            rest_sec: rx.rest_sec ?? '',
+            tempo: rx.tempo ?? '',
+            notes: rx.notes ?? '',
           })),
         })),
       )
@@ -51,11 +102,11 @@ export default function ProgramBuilderPage() {
   function updateDay(i: number, patch: Partial<BDay>) {
     setDays((ds) => ds.map((d, j) => (j === i ? { ...d, ...patch } : d)))
   }
-  function addExercise(dayIdx: number, ex: BExercise) {
+  function addExercise(dayIdx: number, ex: { id: number; name: string }) {
     setDays((ds) =>
       ds.map((d, j) =>
         j === dayIdx && !d.exercises.some((e) => e.id === ex.id)
-          ? { ...d, exercises: [...d.exercises, ex] }
+          ? { ...d, exercises: [...d.exercises, blankExercise(ex.id, ex.name)] }
           : d,
       ),
     )
@@ -68,13 +119,36 @@ export default function ProgramBuilderPage() {
       ),
     )
   }
+  function updateExercise(dayIdx: number, exId: number, patch: Partial<BExercise>) {
+    setDays((ds) =>
+      ds.map((d, j) =>
+        j === dayIdx
+          ? { ...d, exercises: d.exercises.map((e) => (e.id === exId ? { ...e, ...patch } : e)) }
+          : d,
+      ),
+    )
+  }
 
   function save() {
     const payload = {
       name: name.trim(),
+      description: description.trim() || undefined,
       days: days.map((d, i) => ({
         name: d.name.trim() || `День ${i + 1}`,
-        exercises: d.exercises.map((e) => ({ exercise_id: e.id })),
+        notes: d.notes.trim() || undefined,
+        exercises: d.exercises.map(
+          (e): NewPrescription => ({
+            exercise_id: e.id,
+            sets: numOrUndef(e.sets),
+            rep_min: numOrUndef(e.rep_min),
+            rep_max: numOrUndef(e.rep_max),
+            weight_min_kg: numOrUndef(e.weight_min_kg),
+            weight_max_kg: numOrUndef(e.weight_max_kg),
+            rest_sec: numOrUndef(e.rest_sec),
+            tempo: e.tempo.trim() || undefined,
+            notes: e.notes.trim() || undefined,
+          }),
+        ),
       })),
     }
     const done = { onSuccess: (prog: { id: number }) => navigate(`/program/${prog.id}`) }
@@ -102,6 +176,15 @@ export default function ProgramBuilderPage() {
           className="mb-5 w-full rounded-xl border border-slate-700 bg-slate-950 px-3 py-2.5 text-slate-100"
         />
 
+        <label className="mb-1 block text-xs font-bold text-slate-500">Описание</label>
+        <textarea
+          value={description}
+          onChange={(e) => setDescription(e.target.value)}
+          aria-label="Описание программы"
+          rows={2}
+          className="mb-5 w-full rounded-xl border border-slate-700 bg-slate-950 px-3 py-2.5 text-slate-100"
+        />
+
         <div className="flex flex-col gap-4">
           {days.map((day, di) => (
             <section key={di} className="rounded-2xl border border-slate-800 bg-slate-900 p-3">
@@ -124,24 +207,74 @@ export default function ProgramBuilderPage() {
                 )}
               </div>
 
+              <input
+                value={day.notes}
+                onChange={(e) => updateDay(di, { notes: e.target.value })}
+                placeholder="Заметка дня"
+                aria-label={`Заметка дня ${di + 1}`}
+                className="mb-3 w-full rounded-lg border border-slate-800 bg-slate-950 px-2 py-1.5 text-sm text-slate-300"
+              />
+
               {day.exercises.length === 0 && (
                 <p className="mb-2 text-sm text-slate-500">Упражнений пока нет.</p>
               )}
-              <ul className="mb-2 flex flex-col gap-1.5">
+              <ul className="mb-2 flex flex-col gap-2">
                 {day.exercises.map((ex) => (
                   <li
                     key={ex.id}
-                    className="flex items-center justify-between rounded-lg border border-slate-800 bg-slate-950 px-3 py-2"
+                    className="rounded-lg border border-slate-800 bg-slate-950 px-3 py-2"
                   >
-                    <span className="text-sm text-slate-200">{ex.name}</span>
-                    <button
-                      type="button"
-                      onClick={() => removeExercise(di, ex.id)}
-                      aria-label={`Убрать ${ex.name}`}
-                      className="text-slate-500"
-                    >
-                      ✕
-                    </button>
+                    <div className="mb-1.5 flex items-center justify-between">
+                      <span className="text-sm text-slate-200">{ex.name}</span>
+                      <button
+                        type="button"
+                        onClick={() => removeExercise(di, ex.id)}
+                        aria-label={`Убрать ${ex.name}`}
+                        className="text-slate-500"
+                      >
+                        ✕
+                      </button>
+                    </div>
+                    <div className="flex flex-wrap items-center gap-1.5">
+                      <input
+                        inputMode="numeric"
+                        value={ex.sets}
+                        onChange={(e) =>
+                          updateExercise(di, ex.id, { sets: parseNum(e.target.value) })
+                        }
+                        placeholder="Подходы"
+                        aria-label={`Подходы: ${ex.name}`}
+                        className="w-16 rounded-lg border border-slate-700 bg-slate-900 px-2 py-1 text-center text-sm text-slate-100"
+                      />
+                      <input
+                        inputMode="numeric"
+                        value={ex.rep_min}
+                        onChange={(e) =>
+                          updateExercise(di, ex.id, { rep_min: parseNum(e.target.value) })
+                        }
+                        placeholder="Повт. от"
+                        aria-label={`Повторения от: ${ex.name}`}
+                        className="w-16 rounded-lg border border-slate-700 bg-slate-900 px-2 py-1 text-center text-sm text-slate-100"
+                      />
+                      <span className="text-slate-600">–</span>
+                      <input
+                        inputMode="numeric"
+                        value={ex.rep_max}
+                        onChange={(e) =>
+                          updateExercise(di, ex.id, { rep_max: parseNum(e.target.value) })
+                        }
+                        placeholder="до"
+                        aria-label={`Повторения до: ${ex.name}`}
+                        className="w-16 rounded-lg border border-slate-700 bg-slate-900 px-2 py-1 text-center text-sm text-slate-100"
+                      />
+                      <input
+                        value={ex.notes}
+                        onChange={(e) => updateExercise(di, ex.id, { notes: e.target.value })}
+                        placeholder="Заметка"
+                        aria-label={`Заметка: ${ex.name}`}
+                        className="min-w-[8rem] flex-1 rounded-lg border border-slate-700 bg-slate-900 px-2 py-1 text-sm text-slate-100"
+                      />
+                    </div>
                   </li>
                 ))}
               </ul>
@@ -166,7 +299,9 @@ export default function ProgramBuilderPage() {
 
         <button
           type="button"
-          onClick={() => setDays((ds) => [...ds, { name: `День ${ds.length + 1}`, exercises: [] }])}
+          onClick={() =>
+            setDays((ds) => [...ds, { name: `День ${ds.length + 1}`, notes: '', exercises: [] }])
+          }
           className="mt-3 w-full rounded-2xl border border-slate-700 px-4 py-2.5 text-sm font-semibold text-slate-300"
         >
           + Добавить день

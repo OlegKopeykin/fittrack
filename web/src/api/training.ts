@@ -57,10 +57,22 @@ export type Program = {
   days?: ProgramDay[]
 }
 
+export type NewPrescription = {
+  exercise_id: number
+  sets?: number
+  rep_min?: number
+  rep_max?: number
+  weight_min_kg?: number
+  weight_max_kg?: number
+  rest_sec?: number
+  tempo?: string
+  notes?: string
+}
+
 export type NewProgram = {
   name: string
   description?: string
-  days: { name: string; exercises: { exercise_id: number }[] }[]
+  days: { name: string; notes?: string; exercises: NewPrescription[] }[]
 }
 
 export type ProgramDayDetail = {

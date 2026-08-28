@@ -182,6 +182,200 @@ func TestUpdateProgramReplacesContent(t *testing.T) {
 	}
 }
 
+// programDaysWithFields описывает ответ GET программы с полным набором полей,
+// нужных, чтобы проверить, что правка ничего не теряет.
+type programWithFields struct {
+	Name        string `json:"name"`
+	Description string `json:"description"`
+	Days        []struct {
+		ID        int64  `json:"id"`
+		Name      string `json:"name"`
+		Notes     string `json:"notes"`
+		Exercises []struct {
+			ExerciseID  int64   `json:"exercise_id"`
+			Sets        int64   `json:"sets"`
+			RepMin      int     `json:"rep_min"`
+			RepMax      int     `json:"rep_max"`
+			WeightMinKg float64 `json:"weight_min_kg"`
+			WeightMaxKg float64 `json:"weight_max_kg"`
+			RestSec     int     `json:"rest_sec"`
+			Tempo       string  `json:"tempo"`
+			Notes       string  `json:"notes"`
+		} `json:"exercises"`
+	} `json:"days"`
+}
+
+// TestUpdateProgramPreservesDayIdentity — правка программы должна сохранять
+// id существующих дней (позиционное сопоставление) и переносить все поля
+// (описание, заметки дня, sets/rep/вес/notes предписаний), а не только
+// name/exercise_id. Иначе тренировки, ссылающиеся на program_day_id дня,
+// теряют привязку (ON DELETE SET NULL), а описание/заметки/предписания
+// стираются в 0/NULL/''.
+func TestUpdateProgramPreservesDayIdentity(t *testing.T) {
+	ts := testutil.NewTestServer(t, nil)
+	ownerSession(t, ts)
+
+	create := ts.PostJSON(t, "/api/v1/programs", map[string]any{
+		"name":        "Черновик",
+		"description": "старое описание",
+		"days": []map[string]any{
+			{
+				"name": "День 1", "notes": "старая заметка дня",
+				"exercises": []map[string]any{
+					{
+						"exercise_name": "Присед в Смите", "sets": 3, "rep_min": 6, "rep_max": 10,
+						"weight_min_kg": 60, "weight_max_kg": 80, "rest_sec": 90, "tempo": "3-0-1",
+						"notes": "старая заметка упражнения",
+					},
+				},
+			},
+			{"name": "День 2", "exercises": []map[string]any{{"exercise_name": "Жим гантелей лёжа"}}},
+		},
+	})
+	if create.StatusCode != http.StatusCreated {
+		t.Fatalf("create: status = %d, want 201", create.StatusCode)
+	}
+	var prog struct {
+		ID   int64 `json:"id"`
+		Days []struct {
+			ID int64 `json:"id"`
+		} `json:"days"`
+	}
+	testutil.DecodeJSON(t, create, &prog)
+	if len(prog.Days) != 2 {
+		t.Fatalf("ожидалось 2 дня, получено %d", len(prog.Days))
+	}
+	day1ID, day2ID := prog.Days[0].ID, prog.Days[1].ID
+
+	// тренировка привязана к первому дню
+	wkResp := ts.PostJSON(t, "/api/v1/workouts", map[string]any{"program_day_id": day1ID})
+	if wkResp.StatusCode != http.StatusCreated {
+		t.Fatalf("create workout: status = %d, want 201", wkResp.StatusCode)
+	}
+	var wk struct {
+		ID int64 `json:"id"`
+	}
+	testutil.DecodeJSON(t, wkResp, &wk)
+
+	// правка: новое имя/описание дня и упражнения, новый набор полей предписания
+	upd := putJSON(t, ts, "/api/v1/programs/"+itoa(prog.ID), map[string]any{
+		"name":        "Фул бади",
+		"description": "новое описание",
+		"days": []map[string]any{
+			{
+				"name": "День A", "notes": "новая заметка дня",
+				"exercises": []map[string]any{
+					{
+						"exercise_name": "Жим гантелей лёжа", "sets": 4, "rep_min": 8, "rep_max": 12,
+						"weight_min_kg": 20, "weight_max_kg": 30, "rest_sec": 60, "tempo": "2-0-1",
+						"notes": "новая заметка упражнения",
+					},
+				},
+			},
+			{"name": "День B", "exercises": []map[string]any{{"exercise_name": "Присед в Смите"}}},
+		},
+	})
+	if upd.StatusCode != http.StatusOK {
+		t.Fatalf("update: status = %d, want 200", upd.StatusCode)
+	}
+
+	var got programWithFields
+	testutil.DecodeJSON(t, ts.Get(t, "/api/v1/programs/"+itoa(prog.ID)), &got)
+	if got.Name != "Фул бади" || got.Description != "новое описание" {
+		t.Errorf("программа = %+v, want name=Фул бади description=новое описание", got)
+	}
+	if len(got.Days) != 2 {
+		t.Fatalf("дней = %d, want 2", len(got.Days))
+	}
+	if got.Days[0].ID != day1ID || got.Days[1].ID != day2ID {
+		t.Errorf("id дней изменились: было %d/%d, стало %d/%d", day1ID, day2ID, got.Days[0].ID, got.Days[1].ID)
+	}
+	d1 := got.Days[0]
+	if d1.Name != "День A" || d1.Notes != "новая заметка дня" {
+		t.Errorf("день 1 = %+v", d1)
+	}
+	if len(d1.Exercises) != 1 {
+		t.Fatalf("предписаний в дне 1 = %d, want 1", len(d1.Exercises))
+	}
+	e1 := d1.Exercises[0]
+	if e1.Sets != 4 || e1.RepMin != 8 || e1.RepMax != 12 || e1.WeightMinKg != 20 || e1.WeightMaxKg != 30 ||
+		e1.RestSec != 60 || e1.Tempo != "2-0-1" || e1.Notes != "новая заметка упражнения" {
+		t.Errorf("предписание дня 1 = %+v", e1)
+	}
+
+	// тренировка не отвязалась от дня 1 (тот же id, содержимое дня заменилось)
+	var wkAfter struct {
+		ProgramDayID *int64 `json:"program_day_id"`
+	}
+	testutil.DecodeJSON(t, ts.Get(t, "/api/v1/workouts/"+itoa(wk.ID)), &wkAfter)
+	if wkAfter.ProgramDayID == nil || *wkAfter.ProgramDayID != day1ID {
+		t.Errorf("тренировка отвязалась от дня программы: program_day_id = %v, want %d", wkAfter.ProgramDayID, day1ID)
+	}
+}
+
+// TestUpdateProgramDayCountChanges — уменьшение числа дней удаляет лишние,
+// увеличение — добавляет новые, id общих дней не меняется.
+func TestUpdateProgramDayCountChanges(t *testing.T) {
+	ts := testutil.NewTestServer(t, nil)
+	ownerSession(t, ts)
+
+	create := ts.PostJSON(t, "/api/v1/programs", map[string]any{
+		"name": "П",
+		"days": []map[string]any{
+			{"name": "День 1", "exercises": []map[string]any{{"exercise_name": "Присед в Смите"}}},
+			{"name": "День 2", "exercises": []map[string]any{{"exercise_name": "Жим гантелей лёжа"}}},
+		},
+	})
+	var prog struct {
+		ID   int64 `json:"id"`
+		Days []struct {
+			ID int64 `json:"id"`
+		} `json:"days"`
+	}
+	testutil.DecodeJSON(t, create, &prog)
+	day1ID := prog.Days[0].ID
+
+	// уменьшили до 1 дня — второй удалён
+	shrink := putJSON(t, ts, "/api/v1/programs/"+itoa(prog.ID), map[string]any{
+		"name": "П",
+		"days": []map[string]any{
+			{"name": "День 1", "exercises": []map[string]any{{"exercise_name": "Присед в Смите"}}},
+		},
+	})
+	if shrink.StatusCode != http.StatusOK {
+		t.Fatalf("shrink: status = %d, want 200", shrink.StatusCode)
+	}
+	var afterShrink programWithFields
+	testutil.DecodeJSON(t, ts.Get(t, "/api/v1/programs/"+itoa(prog.ID)), &afterShrink)
+	if len(afterShrink.Days) != 1 || afterShrink.Days[0].ID != day1ID {
+		t.Fatalf("после уменьшения дней = %+v, want 1 день с id %d", afterShrink.Days, day1ID)
+	}
+
+	// увеличили до 3 дней — первый сохранил id, добавились новые
+	grow := putJSON(t, ts, "/api/v1/programs/"+itoa(prog.ID), map[string]any{
+		"name": "П",
+		"days": []map[string]any{
+			{"name": "День 1", "exercises": []map[string]any{{"exercise_name": "Присед в Смите"}}},
+			{"name": "День 2", "exercises": []map[string]any{{"exercise_name": "Жим гантелей лёжа"}}},
+			{"name": "День 3", "exercises": []map[string]any{{"exercise_name": "Присед в Смите"}}},
+		},
+	})
+	if grow.StatusCode != http.StatusOK {
+		t.Fatalf("grow: status = %d, want 200", grow.StatusCode)
+	}
+	var afterGrow programWithFields
+	testutil.DecodeJSON(t, ts.Get(t, "/api/v1/programs/"+itoa(prog.ID)), &afterGrow)
+	if len(afterGrow.Days) != 3 {
+		t.Fatalf("после увеличения дней = %d, want 3", len(afterGrow.Days))
+	}
+	if afterGrow.Days[0].ID != day1ID {
+		t.Errorf("id первого дня изменился: было %d, стало %d", day1ID, afterGrow.Days[0].ID)
+	}
+	if afterGrow.Days[1].Name != "День 2" || afterGrow.Days[2].Name != "День 3" {
+		t.Errorf("новые дни = %+v", afterGrow.Days[1:])
+	}
+}
+
 func TestUpdateProgramOwnership(t *testing.T) {
 	ts := testutil.NewTestServer(t, nil)
 	ownerSession(t, ts)

@@ -19,8 +19,14 @@ SELECT * FROM programs WHERE id = ?;
 -- name: UpdateProgram :execrows
 UPDATE programs SET name = ?, description = ? WHERE id = ? AND user_id = ?;
 
--- name: DeleteProgramDays :exec
-DELETE FROM program_days WHERE program_id = ?;
+-- name: UpdateProgramDay :execrows
+UPDATE program_days SET name = ?, notes = ? WHERE id = ?;
+
+-- name: DeleteProgramDay :exec
+DELETE FROM program_days WHERE id = ?;
+
+-- name: DeletePrescriptionsForDay :exec
+DELETE FROM prescriptions WHERE program_day_id = ?;
 
 -- name: SetProgramArchived :execrows
 UPDATE programs SET archived_at = ? WHERE id = ? AND user_id = ?;
