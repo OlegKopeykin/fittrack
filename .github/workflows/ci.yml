@@ -15,7 +15,7 @@ concurrency:
 jobs:
   go:
     name: Go tests
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     steps:
       - uses: actions/checkout@v6
       - uses: actions/setup-go@v6
@@ -26,7 +26,7 @@ jobs:
 
   web:
     name: Web tests
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     defaults:
       run:
         working-directory: web
@@ -43,7 +43,7 @@ jobs:
 
   build:
     name: Build binary
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     steps:
       - uses: actions/checkout@v6
       - uses: actions/setup-node@v6
@@ -68,7 +68,7 @@ jobs:
           ver="$(cat VERSION)"
           go build -tags embedweb -trimpath -ldflags="-s -w -X main.appVersion=$ver" -o fittrack ./cmd/fittrack
           go build -tags "embedweb e2eseed" -trimpath -ldflags="-X main.appVersion=$ver" -o fittrack-e2e ./cmd/fittrack
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v7
         with:
           name: fittrack-e2e
           path: fittrack-e2e
@@ -76,7 +76,7 @@ jobs:
 
   e2e:
     name: E2E (${{ matrix.project }})
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     needs: build
     strategy:
       fail-fast: false
@@ -93,7 +93,7 @@ jobs:
           node-version: 22
           cache: npm
           cache-dependency-path: e2e/package-lock.json
-      - uses: actions/download-artifact@v4
+      - uses: actions/download-artifact@v8
         with:
           name: fittrack-e2e
           path: bin
@@ -102,7 +102,7 @@ jobs:
         working-directory: e2e
       - name: Cache Playwright browsers
         id: pw-cache
-        uses: actions/cache@v4
+        uses: actions/cache@v6
         with:
           path: ~/.cache/ms-playwright
           key: pw-${{ runner.os }}-${{ matrix.browser }}-${{ hashFiles('e2e/package-lock.json') }}
@@ -117,7 +117,7 @@ jobs:
       - name: Run E2E
         working-directory: e2e
         run: npx playwright test --project=${{ matrix.project }}
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v7
         if: failure()
         with:
           name: playwright-report-${{ matrix.project }}
