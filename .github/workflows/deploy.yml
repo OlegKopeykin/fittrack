@@ -1,17 +1,13 @@
 name: Deploy
 
-# Слияние в main → сборка → выкатка на прод по SSH. Тесты здесь не гоняются:
-# в main попадает только ветка, прошедшая CI (branch protection, strict).
-# Если VERSION поднят (тега vX.Y.Z ещё нет) — дополнительно публикуется Release.
 on:
   push:
     branches: [main]
-  workflow_dispatch:     # ручной передеплой текущего main
+  workflow_dispatch:
 
 permissions:
   contents: read
 
-# Деплои строго по очереди, незавершённый не отменяется.
 concurrency:
   group: deploy
   cancel-in-progress: false
@@ -64,8 +60,6 @@ jobs:
           install -m 700 -d ~/.ssh
           printf '%s\n' "$SSH_KEY" > ~/.ssh/deploy_key && chmod 600 ~/.ssh/deploy_key
           printf '%s\n' "$KNOWN_HOSTS" > ~/.ssh/known_hosts
-      # Ключ на сервере ограничен forced command (deploy/deploy-entry.sh):
-      # бинарь уходит в stdin, "команда" — его sha256 и git-sha.
       - name: Upload and install
         env:
           HOST: ${{ secrets.DEPLOY_HOST }}
@@ -83,7 +77,7 @@ jobs:
     steps:
       - uses: actions/checkout@v6
         with:
-          fetch-depth: 0        # теги и история для списка изменений
+          fetch-depth: 0
       - name: Check version
         id: ver
         run: |

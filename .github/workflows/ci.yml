@@ -1,8 +1,5 @@
 name: CI
 
-# Тесты — только на push в рабочие ветки. main защищён (strict: ветка должна быть
-# актуальной и пройти все проверки), поэтому после слияния тесты не повторяются:
-# deploy.yml сразу собирает и выкатывает.
 on:
   push:
     branches-ignore: [main]
@@ -11,7 +8,6 @@ on:
 permissions:
   contents: read
 
-# Новый push в ветку отменяет незавершённый прогон той же ветки.
 concurrency:
   group: ci-${{ github.ref }}
   cancel-in-progress: true
@@ -45,9 +41,6 @@ jobs:
       - run: npm run lint
       - run: npx vitest run --coverage
 
-  # Веб собирается один раз, из него — оба бинаря: релизный (проверка, что
-  # собирается) и e2e с тегом e2eseed (детерминированные фикстуры Playwright).
-  # Идёт параллельно с unit-тестами: E2E не ждут go/web.
   build:
     name: Build binary
     runs-on: ubuntu-latest
