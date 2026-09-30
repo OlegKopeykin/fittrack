@@ -1,0 +1,113 @@
+name: Deploy
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: deploy
+  cancel-in-progress: false
+
+jobs:
+  build:
+    name: Build
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+      - uses: actions/setup-node@v6
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: web/package-lock.json
+      - uses: actions/setup-go@v6
+        with:
+          go-version-file: go.mod
+      - name: Build web
+        working-directory: web
+        run: |
+          npm ci
+          npm run build
+      - name: Build binary (linux/amd64, embedded SPA)
+        env:
+          CGO_ENABLED: "0"
+          GOOS: linux
+          GOARCH: amd64
+        run: go build -tags embedweb -trimpath -ldflags="-s -w -X main.appVersion=$(cat VERSION)" -o fittrack ./cmd/fittrack
+      - uses: actions/upload-artifact@v4
+        with:
+          name: fittrack
+          path: fittrack
+          retention-days: 30
+
+  deploy:
+    name: Deploy to prod
+    needs: build
+    runs-on: ubuntu-latest
+    environment: production
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          name: fittrack
+      - name: Configure SSH
+        env:
+          SSH_KEY: ${{ secrets.DEPLOY_SSH_KEY }}
+          KNOWN_HOSTS: ${{ secrets.DEPLOY_KNOWN_HOSTS }}
+        run: |
+          install -m 700 -d ~/.ssh
+          printf '%s\n' "$SSH_KEY" > ~/.ssh/deploy_key && chmod 600 ~/.ssh/deploy_key
+          printf '%s\n' "$KNOWN_HOSTS" > ~/.ssh/known_hosts
+      - name: Upload and install
+        env:
+          HOST: ${{ secrets.DEPLOY_HOST }}
+        run: |
+          sum="$(sha256sum fittrack | awk '{print $1}')"
+          ssh -i ~/.ssh/deploy_key -o IdentitiesOnly=yes -o BatchMode=yes \
+            "deploy@$HOST" "$sum $GITHUB_SHA" < fittrack
+
+  release:
+    name: Publish release
+    needs: deploy
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          fetch-depth: 0
+      - name: Check version
+        id: ver
+        run: |
+          tag="v$(cat VERSION)"
+          echo "tag=$tag" >> "$GITHUB_OUTPUT"
+          if git rev-parse -q --verify "refs/tags/$tag" >/dev/null; then
+            echo "new=false" >> "$GITHUB_OUTPUT"
+            echo "$tag уже выпущен — Release не нужен"
+          else
+            echo "new=true" >> "$GITHUB_OUTPUT"
+          fi
+      - uses: actions/download-artifact@v4
+        if: steps.ver.outputs.new == 'true'
+        with:
+          name: fittrack
+      - name: Publish ${{ steps.ver.outputs.tag }}
+        if: steps.ver.outputs.new == 'true'
+        env:
+          GH_TOKEN: ${{ github.token }}
+          TAG: ${{ steps.ver.outputs.tag }}
+        run: |
+          prev="$(git describe --tags --abbrev=0 2>/dev/null || true)"
+          if [ -n "$prev" ]; then
+            printf '## Изменения с %s\n\n' "$prev" > notes.md
+            git log --no-merges --pretty='- %s' "${prev}..HEAD" >> notes.md
+          else
+            printf '## Изменения\n\n' > notes.md
+            git log --no-merges --pretty='- %s' HEAD >> notes.md
+          fi
+          sha256sum fittrack | awk '{print $1}' > fittrack.sha256
+          gh release create "$TAG" fittrack fittrack.sha256 \
+            --repo "$GITHUB_REPOSITORY" --target "$GITHUB_SHA" \
+            --title "FitTrack $TAG" --notes-file notes.md
