@@ -15,7 +15,7 @@ concurrency:
 jobs:
   build:
     name: Build
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     steps:
       - uses: actions/checkout@v6
       - uses: actions/setup-node@v6
@@ -37,7 +37,7 @@ jobs:
           GOOS: linux
           GOARCH: amd64
         run: go build -tags embedweb -trimpath -ldflags="-s -w -X main.appVersion=$(cat VERSION)" -o fittrack ./cmd/fittrack
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v7
         with:
           name: fittrack
           path: fittrack
@@ -46,10 +46,10 @@ jobs:
   deploy:
     name: Deploy to prod
     needs: build
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     environment: production
     steps:
-      - uses: actions/download-artifact@v4
+      - uses: actions/download-artifact@v8
         with:
           name: fittrack
       - name: Configure SSH
@@ -71,7 +71,7 @@ jobs:
   release:
     name: Publish release
     needs: deploy
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     permissions:
       contents: write
     steps:
@@ -89,7 +89,7 @@ jobs:
           else
             echo "new=true" >> "$GITHUB_OUTPUT"
           fi
-      - uses: actions/download-artifact@v4
+      - uses: actions/download-artifact@v8
         if: steps.ver.outputs.new == 'true'
         with:
           name: fittrack
