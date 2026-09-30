@@ -2,38 +2,47 @@
 
 FitTrack — один статический бинарь (SPA встроена), SQLite лежит рядом.
 Схема: Linux-хост, systemd-сервис на loopback, снаружи — реверс-прокси с TLS.
-Обновление — **pull-деплой**: хост сам забирает последний версионный GitHub
-Release (репозиторий публичный → без токенов и входящего SSH).
+Обновление — **push-деплой из GitHub Actions** по SSH.
 
 ## Как обновляется прод
 
-1. Тег версии `vX.Y.Z` → job `release` в `ci.yml` собирает бинарь и публикует
-   Release `vX.Y.Z` (ассеты: `fittrack`, `fittrack.sha256`, `fittrack.sha`).
-   Push в `main` без тега только прогоняет тесты — прод не трогает.
-2. На хосте `fittrack-deploy.timer` раз в 2 минуты запускает `pull-deploy.sh`:
-   берёт последний релиз, сверяет `fittrack.sha` с установленным, при отличии —
-   скачивает бинарь, проверяет sha256, атомарно заменяет, рестартит сервис,
-   healthcheck. Sha фиксируется только после успешного healthcheck.
+1. Push в рабочую ветку → `ci.yml`: Go/Web-тесты, сборка, E2E. `main` защищён
+   (strict: ветка актуальна и прошла все проверки), поэтому после слияния тесты
+   не повторяются.
+2. Слияние в `main` → `deploy.yml`: сборка бинаря → SSH на хост под `deploy` →
+   `install.sh`: проверка sha256, снимок БД (`fittrack-backup.service`),
+   атомарная замена, рестарт, healthcheck; при неудаче — откат на прежний бинарь.
+   Результат виден в Actions (environment `production`).
+3. Если в `VERSION` новая версия (тега `vX.Y.Z` нет) — после деплоя
+   публикуется GitHub Release. Теги руками ставить не нужно.
+
+Ручной передеплой текущего `main`: Actions → Deploy → Run workflow.
+
+Секреты репозитория: `DEPLOY_HOST` (адрес хоста), `DEPLOY_SSH_KEY` (приватный
+ключ CI), `DEPLOY_KNOWN_HOSTS` (строка `ssh-keyscan` хоста).
 
 ## Подготовка хоста (однократно)
 
 ```sh
 useradd --system --shell /usr/sbin/nologin fittrack
+useradd -m -s /bin/bash deploy
 mkdir -p /opt/fittrack/bin /var/lib/fittrack
 chown fittrack:fittrack /var/lib/fittrack
 
-install fittrack.service.example         /etc/systemd/system/fittrack.service
-install pull-deploy.sh                    /opt/fittrack/bin/pull-deploy.sh
-install fittrack-deploy.service.example   /etc/systemd/system/fittrack-deploy.service
-install fittrack-deploy.timer.example     /etc/systemd/system/fittrack-deploy.timer
+install fittrack.service.example  /etc/systemd/system/fittrack.service
+install -m 755 install.sh         /opt/fittrack/bin/install.sh
+install -m 755 deploy-entry.sh    /opt/fittrack/bin/deploy-entry.sh
+echo 'deploy ALL=(root) NOPASSWD: /opt/fittrack/bin/install.sh' > /etc/sudoers.d/deploy-fittrack
+
+# Ключ CI умеет только передать бинарь (forced command, без shell и форвардинга):
+echo 'command="/opt/fittrack/bin/deploy-entry.sh",restrict ssh-ed25519 AAAA… github-actions' \
+  > ~deploy/.ssh/authorized_keys
 
 systemctl daemon-reload
 systemctl enable --now fittrack
-systemctl enable --now fittrack-deploy.timer
 ```
 
-Реверс-прокси (TLS-терминация → `http://127.0.0.1:8080`) настраивается
-отдельно под конкретный хост; в публичный репозиторий его конфиг не кладём.
+Снимок перед деплоем требует установленного `fittrack-backup.service` (ниже).
 
 ## Первый owner-инвайт
 
